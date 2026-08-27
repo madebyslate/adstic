@@ -1,0 +1,302 @@
+---
+import type { HowWeWorkBlock } from '@repo/shared'
+
+interface Props {
+  block: HowWeWorkBlock
+}
+
+const { block } = Astro.props
+const headingId = 'how-we-work-heading'
+
+/**
+ * Numer kroku i strzałka są ozdobnikami z makiety, nie danymi — liczymy je
+ * z pozycji na liście (patrz `WorkStep` w packages/shared). Gdyby numer był
+ * polem, zmiana kolejności kroków rozjeżdżałaby numerację; gdyby polem była
+ * strzałka, ktoś prędzej czy później postawiłby ją na ostatnim kroku, gdzie
+ * nie ma już do czego prowadzić.
+ */
+const steps = block.steps.map((step, index) => ({
+  ...step,
+  number: `/${String(index + 1).padStart(2, '0')}`,
+  hasArrow: index < block.steps.length - 1,
+}))
+---
+
+{/*
+  Wejście sekcji. Grupa trzyma wszystkie animacje w środku na pierwszej klatce,
+  dopóki obserwator w BaseLayout nie uzna, że warto ją odegrać — mechanizm jest
+  opisany przy „W polu widzenia" w global.css.
+*/}
+<section class="steps" aria-labelledby={headingId} data-reveal-group>
+  <div class="container-page">
+    <p class="steps__eyebrow reveal" style="--reveal-index: 0">{block.eyebrow}</p>
+
+    {/* Etykieta wyżej jest podpisem, nagłówkiem sekcji jest to zdanie. */}
+    <h2 id={headingId} class="steps__heading reveal" style="--reveal-index: 1">{block.heading}</h2>
+
+    <p class="steps__lead reveal" style="--reveal-index: 2">{block.lead}</p>
+
+    <ol class="steps__rail" style={`--step-count: ${steps.length}`}>
+      {
+        steps.map((step, index) => (
+          <li class="step reveal" style={`--reveal-index: ${index + 3}; --step-index: ${index}`}>
+            {/*
+              Numer jest ozdobnikiem: kolejność niesie sam `<ol>`, więc czytnik
+              ekranu dostałby ją drugi raz.
+            */}
+            <span class="step__number" aria-hidden="true">
+              {step.number}
+            </span>
+
+            <h3 class="step__title">{step.title}</h3>
+
+            <p class="step__description">{step.description}</p>
+
+            {step.hasArrow && (
+              <span class="step__arrow" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </span>
+            )}
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</section>
+
+<style>
+  .steps {
+    padding-block: var(--section-padding-y);
+    background-color: var(--color-bg);
+  }
+
+  /* Kwadracik przed etykietą jest ozdobnikiem — `::before`, żeby nie wchodził
+     do treści odczytywanej przez czytnik ekranu. */
+  .steps__eyebrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-5);
+    color: var(--color-fg);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-wide);
+    line-height: var(--leading-tight);
+    text-transform: uppercase;
+  }
+
+  .steps__eyebrow::before {
+    width: var(--space-1);
+    height: var(--space-1);
+    background-color: var(--color-brand);
+    content: '';
+  }
+
+  .steps__heading {
+    max-width: var(--steps-heading-width);
+    margin: 0 auto var(--space-4);
+    color: var(--color-fg);
+    font-family: var(--font-heading);
+    font-size: var(--text-3xl);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--leading-display);
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  .steps__lead {
+    max-width: var(--steps-lead-width);
+    margin: 0 auto var(--space-7);
+    color: var(--color-fg-soft-muted);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--leading-normal);
+    text-align: center;
+    text-wrap: balance;
+  }
+
+  .steps__rail {
+    display: grid;
+    gap: var(--step-gap);
+    margin: 0;
+    padding: var(--step-rail-padding);
+    border-radius: var(--step-rail-radius);
+    background-color: var(--color-surface-rail);
+    list-style: none;
+  }
+
+  .step {
+    position: relative;
+    /*
+      PUŁAPKA: kafle malują się w kolejności ODWROTNEJ do swojej kolejności
+      w dokumencie, i to jest wymóg, nie kosmetyka. Strzałka siedzi okrakiem na
+      prześwicie i należy do kafla PO LEWEJ — bez tej reguły kafel następny
+      zamalowuje jej prawą połowę.
+
+      Wcześniej wystarczał `z-index: 1` na samej strzałce, bo kafle nie tworzyły
+      kontekstów układania. Wejście sekcji to zmieniło: `.reveal` zostawia na
+      kaflu `transform` (po animacji jest to macierz jednostkowa, ale JAKAKOLWIEK
+      wartość inna niż `none` tworzy kontekst), więc `z-index` strzałki przestał
+      sięgać poza własny kafel i zaczęła się liczyć wyłącznie kolejność w DOM.
+
+      Liczone z liczby kroków, nie wpisane `nth-child`: kroki przychodzą
+      z danych i ich liczba może się zmienić.
+    */
+    z-index: calc(var(--step-count, 1) - var(--step-index, 0));
+    padding: var(--space-5);
+    background-color: var(--color-surface-step);
+    /* Domyślny promień to wewnętrzny; skrajne narożniki nadpisują go niżej. */
+    border-radius: var(--step-radius-inner);
+  }
+
+  .step__number {
+    display: block;
+    color: var(--color-brand-glow);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-tight);
+  }
+
+  /*
+    To ten odstęp — a nie wyrównanie pionowe kafla — trzyma tytuły wszystkich
+    kroków na jednej wysokości: numer jest zawsze jednowierszowy, więc stała
+    odległość od niego daje ten sam punkt startu w każdym kaflu, niezależnie
+    od tego, czy tytuł łamie się na jeden czy dwa wiersze.
+  */
+  .step__title {
+    margin: var(--step-title-offset) 0 var(--space-4);
+    color: var(--color-fg-soft);
+    font-family: var(--font-heading);
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-normal);
+    line-height: var(--leading-snug);
+    text-wrap: pretty;
+  }
+
+  .step__description {
+    margin: 0;
+    color: var(--color-fg-soft-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-normal);
+  }
+
+  /*
+    Strzałka siedzi okrakiem na prześwicie między kaflami i ma być KRYTA —
+    prześwit ani krawędzie kafli nie mogą być przez nią widoczne. Stąd
+    `background-color` w kolorze tła strony POD gradientem: gradient z makiety
+    daje 6–11 % bieli, więc sam w sobie jest szybą, nie plamą.
+
+    Skoro nic nie prześwituje, `backdrop-filter: blur(4.75px)` z makiety nie
+    ma czego rozmywać — zostaje pominięty (PLAYBOOK P-015).
+  */
+  .step__arrow {
+    position: absolute;
+    /*
+      Podnosi strzałkę ponad tło WŁASNEGO kafla. Ponad kafel następny wynosi ją
+      dopiero `z-index` na `.step` wyżej — odkąd kafle są kontekstami układania,
+      potrzebne są obie reguły.
+    */
+    z-index: 1;
+    display: none;
+    place-items: center;
+    width: var(--step-arrow-size);
+    height: var(--step-arrow-size);
+    border-radius: var(--radius-full);
+    background-color: var(--color-bg);
+    background-image: var(--gradient-step-arrow);
+    box-shadow: 0 0 0 var(--step-arrow-ring) var(--color-bg);
+    color: var(--color-fg-soft);
+  }
+
+  .step__arrow svg {
+    width: 60%;
+    height: 60%;
+  }
+
+  /* Jedna kolumna: pas stoi pionowo, więc „zewnętrzne” są góra i dół. */
+  .step:first-child {
+    border-radius: var(--step-radius-outer) var(--step-radius-outer) var(--step-radius-inner)
+      var(--step-radius-inner);
+  }
+
+  .step:last-child {
+    border-radius: var(--step-radius-inner) var(--step-radius-inner) var(--step-radius-outer)
+      var(--step-radius-outer);
+  }
+
+  /* Dwie kolumny: zewnętrzny promień dostaje ten narożnik kafla, który leży
+     w narożniku pasa. */
+  @media (min-width: 768px) {
+    .steps__heading {
+      font-size: var(--text-4xl);
+    }
+
+    .steps__rail {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .step:nth-child(1) {
+      border-radius: var(--step-radius-outer) var(--step-radius-inner) var(--step-radius-inner)
+        var(--step-radius-inner);
+    }
+
+    .step:nth-child(2) {
+      border-radius: var(--step-radius-inner) var(--step-radius-outer) var(--step-radius-inner)
+        var(--step-radius-inner);
+    }
+
+    .step:nth-child(3) {
+      border-radius: var(--step-radius-inner) var(--step-radius-inner) var(--step-radius-inner)
+        var(--step-radius-outer);
+    }
+
+    .step:nth-child(4) {
+      border-radius: var(--step-radius-inner) var(--step-radius-inner) var(--step-radius-outer)
+        var(--step-radius-inner);
+    }
+  }
+
+  /* Cztery kolumny: pas leży poziomo, więc „zewnętrzne” są lewa i prawa —
+     i dopiero tutaj w prześwitach jest miejsce na strzałki. */
+  @media (min-width: 1024px) {
+    .steps__rail {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .step:first-child {
+      border-radius: var(--step-radius-outer) var(--step-radius-inner) var(--step-radius-inner)
+        var(--step-radius-outer);
+    }
+
+    .step:not(:first-child):not(:last-child) {
+      border-radius: var(--step-radius-inner);
+    }
+
+    .step:last-child {
+      border-radius: var(--step-radius-inner) var(--step-radius-outer) var(--step-radius-outer)
+        var(--step-radius-inner);
+    }
+
+    .step__arrow {
+      display: grid;
+      inset-block-start: 50%;
+      inset-inline-end: 0;
+      translate: 50% -50%;
+    }
+  }
+</style>

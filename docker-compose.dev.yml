@@ -1,0 +1,37 @@
+# Lokalny PostgreSQL do developmentu i tworzenia migracji.
+#
+# NIE jest częścią wdrożenia — produkcja korzysta z centralnego PostgreSQL
+# przez zewnętrzną sieć (docker-compose.yml). Ten plik uruchamiasz osobno:
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#
+# i wskazujesz w .env:
+#   DATABASE_URL=postgresql://adstic:adstic@127.0.0.1:5433/adstic
+
+# Własna nazwa projektu jest OBOWIĄZKOWA: bez niej ten plik dzieli projekt
+# (nazwę katalogu) z docker-compose.yml, a `up -d --remove-orphans` z regularnego
+# deploy scriptu usuwa lokalną bazę jako „osieroconą" usługę.
+name: adstic-dev
+
+services:
+  postgres-dev:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: adstic
+      POSTGRES_PASSWORD: adstic
+      POSTGRES_DB: adstic
+    ports:
+      # 5433, żeby nie kolidować z lokalną instalacją PostgreSQL na 5432.
+      - "5433:5432"
+    volumes:
+      - adstic-postgres-dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U adstic -d adstic"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  adstic-postgres-dev:
+    name: adstic-postgres-dev

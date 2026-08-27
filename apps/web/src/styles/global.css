@@ -1,0 +1,512 @@
+@import 'tailwindcss';
+@import '@repo/tokens/tokens.css';
+@import './fonts.css';
+/* Klasy stanu, które Lenis stawia na <html> — bez nich scroll dotykowy i
+   `scroll-behavior: smooth` biją się z silnikiem o tę samą pozycję. */
+@import 'lenis/dist/lenis.css';
+
+/*
+ * Tailwind v4 skanuje źródła automatycznie od katalogu pliku CSS w górę, ale
+ * `@repo/tokens` leży poza `apps/web` — deklarujemy go jawnie, żeby klasy użyte
+ * w komponentach współdzielonych nie zostały wycięte z bundla.
+ */
+@source '../../src';
+
+@layer base {
+  /*
+   * Progressive enhancement (AGENT-RULES §6): elementy animowane na wejściu
+   * startują widoczne. Klasę `.js` dokłada inline script w <head>, więc dopiero
+   * przy działającym JS w ogóle wchodzą stany początkowe animacji.
+   */
+  :root {
+    /* Motyw jest wyłącznie ciemny — informujemy o tym przeglądarkę, żeby
+       kontrolki systemowe (scrollbar, pola formularzy) nie były jasne. */
+    color-scheme: dark;
+    /* Jeden krok choreografii wejścia — patrz „Wejścia" niżej. */
+    --reveal-step: 90ms;
+  }
+
+  html {
+    /* Kotwice nie mają skakać, ale respektujemy preferencję użytkownika. */
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+    /* 500 to najcięższa waga, jaką wysyłamy — patrz styles/fonts.css. */
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-tight);
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Focus widoczny na wszystkim interaktywnym — nigdy `outline: none` bez zamiennika. */
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Obraz nigdy nie rozpycha layoutu poza kontener. */
+  img,
+  picture,
+  video {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /*
+   * Obrazy nie są do wyciągania ze strony przeciągnięciem. `-webkit-user-drag`
+   * załatwia silniki WebKit/Blink, ale Firefox go nie zna — tam blokuje dopiero
+   * atrybut `draggable="false"`, który dokładają `Picture.astro` i `<img>`
+   * logotypów. Stąd dwa miejsca na jedną rzecz, nie duplikat.
+   */
+  img {
+    -webkit-user-drag: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    /*
+     * Twarde wyłączenie ruchu (AGENT-RULES §6). Nie `animation: none` — to
+     * zostawiłoby element w stanie początkowym, czyli często niewidoczny.
+     */
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    /*
+     * Sekcje poniżej pierwszego ekranu trzymają klatkę startową przez PAUZĘ
+     * animacji (patrz „W polu widzenia"). Animacja zapauzowana nigdy nie
+     * dojedzie do końca — bez tej reguły użytkownik z `reduce`, u którego
+     * obserwator jeszcze nie zdążył zadziałać (albo karta jest w tle i
+     * przeglądarka go dławi), zostałby z niewidoczną treścią na stałe.
+     *
+     * Wyliczone klasy, a NIE `*`. Wymuszanie `running` na wszystkim zabiera
+     * pauzę także tam, gdzie jest ona funkcją, a nie usterką: pas opinii ma się
+     * zatrzymywać pod kursorem (WCAG 2.2.2), a narzędzia do zrzutów ekranu
+     * zamrażają animacje właśnie tą własnością — `!important` na gwiazdce bije
+     * jedno i drugie, i objawia się to testem wizualnym, który w nieskończoność
+     * czeka, aż element „się ustabilizuje".
+     */
+    .reveal,
+    .reveal-fade,
+    .reveal-pop,
+    .reveal-rule,
+    .reveal-curtain,
+    .reveal-curtain-hold,
+    .reveal-mask > * {
+      animation-play-state: running !important;
+    }
+  }
+}
+
+@layer components {
+  /* Jedyny sposób na poziome marginesy sekcji — zero lokalnych wariantów. */
+  .container-page {
+    width: 100%;
+    max-width: var(--container-max);
+    margin-inline: auto;
+    padding-inline: var(--container-gutter);
+  }
+
+  @media (min-width: 768px) {
+    .container-page {
+      padding-inline: var(--container-gutter-lg);
+    }
+  }
+
+  /* Pomijanie nawigacji — widoczne dopiero po sfokusowaniu klawiaturą. */
+  .skip-link {
+    position: absolute;
+    left: var(--spacing-4);
+    top: var(--spacing-4);
+    z-index: var(--z-modal);
+    translate: 0 -200%;
+    padding: var(--spacing-2) var(--spacing-4);
+    border-radius: var(--radius-md);
+    background-color: var(--color-fg);
+    color: var(--color-fg-inverse);
+    transition: translate var(--duration-fast) var(--ease-standard);
+  }
+
+  .skip-link:focus-visible {
+    translate: 0 0;
+  }
+
+  /* ── Wejścia ────────────────────────────────────────────────────────────────
+   * Choreografia pierwszego ekranu jest czystym CSS-em: rusza w pierwszej
+   * klatce, bez obserwatora, bez hydratacji, bez frameworka. Kolejność
+   * elementów niesie `--reveal-index` — liczba całkowita ustawiona w markupie,
+   * żeby sekwencję dało się przeczytać tam, gdzie się jej używa, zamiast
+   * szukać jej w obiekcie timeline'u.
+   *
+   * Animujemy wyłącznie `transform` i `opacity` (AGENT-RULES §6). Redukcję
+   * ruchu obsługuje reguła globalna wyżej: wszystko ląduje naraz na klatce
+   * końcowej.
+   */
+
+  @keyframes reveal-rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, var(--reveal-distance, 1.25rem), 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes reveal-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes reveal-line {
+    from {
+      transform: translate3d(0, 105%, 0);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  /*
+   * Kurtyna: przesłona otwiera się od jednej krawędzi, a obraz w środku stoi
+   * w miejscu. Dwa elementy, oba animujące wyłącznie `transform` (AGENT-RULES
+   * §6) — `clip-path` zapisałby to w jednym elemencie, ale nie leży na szybkiej
+   * ścieżce kompozytora.
+   *
+   * Przesłona startuje o pełny krok POZA otworem, więc nic nie widać; obraz
+   * w środku startuje o ten sam krok w drugą stronę, co stawia go z powrotem
+   * w spoczynku. Oba jadą do zera, więc obraz nigdy się nie rusza i jedzie
+   * samo otwarcie.
+   *
+   * Oś należy do wywołującego: `--reveal-curtain-x` / `-y` mówią, z której
+   * strony wjeżdża przesłona, a obraz neguje to, co dostał. Domyślnie wycieranie
+   * od dołu w górę. Skala jest jedyną częścią, która jest dekoracją a nie
+   * mechanizmem: obraz osiada z lekkiego przeskalowania, co czyta się jak
+   * przyjazd kadru, a nie jak rosnąca ramka.
+   */
+  @keyframes reveal-curtain {
+    from {
+      transform: translate3d(var(--reveal-curtain-x, 0%), var(--reveal-curtain-y, 100%), 0);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  @keyframes reveal-curtain-hold {
+    from {
+      transform: translate3d(
+          calc(-1 * var(--reveal-curtain-x, 0%)),
+          calc(-1 * var(--reveal-curtain-y, 100%)),
+          0
+        )
+        scale(var(--reveal-curtain-scale, 1.06));
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  /* Dla drobiazgów, które mają się pojawić, a nie przyjechać — ikona, znacznik.
+     Skala startuje tuż pod 1, żeby czytało się jak osiadanie, nie jak zoom. */
+  @keyframes reveal-pop {
+    from {
+      opacity: 0;
+      transform: scale(var(--reveal-pop-from, 0.86));
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes reveal-rule {
+    from {
+      transform: scaleY(0);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+
+  .reveal,
+  .reveal-fade,
+  .reveal-pop,
+  .reveal-rule,
+  .reveal-curtain,
+  .reveal-curtain-hold {
+    animation-duration: var(--duration-reveal);
+    animation-timing-function: var(--ease-out-expo);
+    animation-fill-mode: both;
+    animation-delay: calc(var(--reveal-index, 0) * var(--reveal-step));
+  }
+
+  .reveal {
+    animation-name: reveal-rise;
+  }
+
+  .reveal-fade {
+    animation-name: reveal-fade;
+  }
+
+  .reveal-pop {
+    animation-name: reveal-pop;
+  }
+
+  .reveal-rule {
+    animation-name: reveal-rule;
+    transform-origin: bottom;
+  }
+
+  /* Sam otwór to sprawa wywołującego: cokolwiek opakowuje `.reveal-curtain`
+     musi przycinać, inaczej przesłona jest po prostu widoczna o wysokość niżej. */
+  .reveal-curtain {
+    animation-name: reveal-curtain;
+  }
+
+  .reveal-curtain-hold {
+    animation-name: reveal-curtain-hold;
+  }
+
+  /*
+   * Maska wiersza: dziecko wyjeżdża spod przyciętej krawędzi.
+   *
+   * `clip-path`, nie `overflow: hidden`. Przy ciasnym `line-height` ogonki „g"
+   * i „y" schodzą pod pole wiersza i `overflow` by je ścinał, a typowa łatka —
+   * padding plus ujemny margines — nie przeżywa zetknięcia ze sklejaniem
+   * marginesów: ujemne marginesy uciekają z nagłówka zamiast skasować padding,
+   * i element kończy o 0.2em wyższy niż jego wiersze. Ujemny inset od dołu
+   * powiększa obszar widoczny bez ruszania layoutu.
+   */
+  .reveal-mask {
+    display: block;
+    clip-path: inset(0 -0.05em -0.16em);
+  }
+
+  .reveal-mask > * {
+    display: block;
+    animation: reveal-line var(--duration-reveal) var(--ease-out-expo) both;
+    animation-delay: calc(var(--reveal-index, 0) * var(--reveal-step));
+  }
+
+  /* ── W polu widzenia ────────────────────────────────────────────────────────
+   * Ta sama choreografia, dla sekcji, do której trzeba doscrollować. Różnica
+   * jest wyłącznie w tym, kiedy rusza zegar: sekcja oznaczona
+   * `data-reveal-group` trzyma każdą animację w środku na pierwszej klatce,
+   * dopóki obserwator w BaseLayout nie ustawi jej `data-inview`.
+   *
+   * `animation-play-state`, a nie drugi komplet klas: przy `fill-mode: both`
+   * animacja zapauzowana renderuje swoją klatkę `from`, więc pauza i wznowienie
+   * SĄ całym mechanizmem — bez zdublowanych keyframe'ów, bez stanu do
+   * synchronizowania, i z nietkniętymi opóźnieniami `--reveal-index`.
+   *
+   * Bramkowane na `html.js`, którą BaseLayout ustawia przed pierwszym
+   * malowaniem: bez skryptu nikt by tego nie wznowił i treść byłaby niewidoczna,
+   * a nie jedynie nieanimowana.
+   */
+  html.js [data-reveal-group]:not([data-inview]) .reveal,
+  html.js [data-reveal-group]:not([data-inview]) .reveal-fade,
+  html.js [data-reveal-group]:not([data-inview]) .reveal-pop,
+  html.js [data-reveal-group]:not([data-inview]) .reveal-rule,
+  html.js [data-reveal-group]:not([data-inview]) .reveal-curtain,
+  html.js [data-reveal-group]:not([data-inview]) .reveal-curtain-hold,
+  html.js [data-reveal-group]:not([data-inview]) .reveal-mask > * {
+    animation-play-state: paused;
+  }
+
+  /* ── Sterowane scrollem ─────────────────────────────────────────────────────
+   * Warstwa, w której ruch NIE jest zdarzeniem („sekcja weszła"), tylko funkcją
+   * pozycji scrolla — parallaxa tła, dojazd kadru. `animation-timeline: view()`
+   * liczy to w kompozytorze: zero JS, zero listenerów scrolla, zero pracy na
+   * wątku głównym (AGENT-RULES §5/§6).
+   *
+   * Całość pod `@supports`, bo Safari poniżej 26 tego nie zna. To NIE jest
+   * degradacja treści — bez wsparcia elementy po prostu stoją w spoczynku,
+   * czyli tam, gdzie stawia je makieta. Dlatego nic tu nie może zmieniać
+   * pozycji spoczynkowej, a wyłącznie odchylenie od niej.
+   */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      /*
+       * Parallaxa: element jedzie wolniej niż strona przez cały czas, gdy jest
+       * w kadrze. `--parallax-from` / `--parallax-to` to skrajne odchylenia,
+       * a punkt spoczynkowy (0) wypada dokładnie na środku przelotu.
+       */
+      @keyframes scroll-parallax {
+        from {
+          transform: translate3d(0, var(--parallax-from, -6%), 0);
+        }
+        to {
+          transform: translate3d(0, var(--parallax-to, 6%), 0);
+        }
+      }
+
+      /*
+       * PUŁAPKA (PLAYBOOK P-050): tu MUSZĄ być longhandy — skrót `animation`
+       * razem z `animation-timeline` jest przez minifikator składany w jedną
+       * deklarację z `view()` w środku, a takiej Chrome nie przyjmuje i wyrzuca
+       * CAŁĄ regułę. W `astro dev` nie widać tego nigdy: dev nie minifikuje.
+       */
+      .scroll-parallax {
+        animation-name: scroll-parallax;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: view();
+        /* Cały przelot przez kadr, od wjazdu dolną krawędzią po zjazd górną. */
+        animation-range: cover 0% cover 100%;
+        will-change: transform;
+      }
+
+      /*
+       * Dojazd kadru: obraz osiada z lekkiego przeskalowania w miarę wjeżdżania
+       * w kadr i zatrzymuje się w spoczynku, gdy jest w połowie ekranu. Inaczej
+       * niż parallaxa — kończy się i zostaje, bo to wejście, nie tło.
+       */
+      @keyframes scroll-settle {
+        from {
+          transform: scale(var(--settle-from, 1.08));
+        }
+        to {
+          transform: none;
+        }
+      }
+
+      .scroll-settle {
+        animation-name: scroll-settle;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 50%;
+        will-change: transform;
+      }
+    }
+  }
+}
+
+/*
+ * ── Poza warstwami, świadomie ───────────────────────────────────────────────
+ * `.btn-wipe` NIE może siedzieć w `@layer components`. Astro wstrzykuje style
+ * komponentów BEZ warstwy, a każda reguła bez warstwy bije każdą regułę
+ * w warstwie niezależnie od swoistości — więc `.hero__cta-face { color: … }`
+ * z komponentu wygrywałby z `.btn-wipe:hover { color: … }` i etykieta zostałaby
+ * ciemna na czerwonym tle. Tutaj obie strony są bez warstwy, więc rozstrzyga
+ * swoistość: `.btn-wipe:hover` (0,2,0) > `.hero__cta-face` (0,1,0).
+ */
+/* ── Przycisk: kłąb spod kursora ────────────────────────────────────────────
+ * Jedyny mechanizm hoveru dla kontrolek w projekcie. Czerwień rozlewa się
+ * kołem dokładnie z punktu, w którym kursor wszedł w przycisk, i zwija się
+ * do punktu, którym wyszedł.
+ *
+ * `transform: scale()` na okrągłym `::before`, a NIE `clip-path: circle()`.
+ * Wizualnie to samo, ale `clip-path` nie leży na szybkiej ścieżce kompozytora
+ * i każda klatka kosztuje przemalowanie (AGENT-RULES §6). Skalowane koło jest
+ * czystą transformacją.
+ *
+ * Klasę stawiasz na elemencie, który NIESIE TŁO przycisku — przy przyciskach
+ * dwuwarstwowych to wewnętrzna pigułka, nie zewnętrzna szyba.
+ *
+ * Wywołujący podaje wyłącznie kolory:
+ *   --btn-surface-hover  płaszczyzna, która wjeżdża (domyślnie marka)
+ *   --btn-fg-hover       kolor etykiety, gdy już wjechała
+ */
+.btn-wipe {
+  position: relative;
+  /*
+   * `isolation`, nie sam `position: relative`. Dziecko z ujemnym `z-index`
+   * potrzebuje konteksu układania NA TYM elemencie — bez niego przebija się
+   * pod tło rodzica (szyby przycisku, płyty sekcji) i po hoverze nie widać
+   * niczego poza zmianą koloru tekstu.
+   */
+  isolation: isolate;
+  /* `clip`, nie `hidden`: to samo przycięcie (z zaokrągleniem włącznie), bez
+     robienia z przycisku kontenera przewijania. */
+  overflow: clip;
+  transition: color var(--duration-base) var(--ease-standard);
+}
+
+.btn-wipe::before {
+  position: absolute;
+  /*
+   * Środek koła. Punkt wejścia kursora dokłada skrypt w BaseLayout; bez JS
+   * zostaje środek przycisku, czyli efekt jest ten sam, tylko symetryczny.
+   */
+  inset-block-start: var(--btn-y, 50%);
+  inset-inline-start: var(--btn-x, 50%);
+  /*
+   * Ujemny `z-index`, a nie dodatni na etykiecie. Kolejność malowania
+   * w kontekście układania stawia dzieci z ujemnym `z-index` NAD tłem
+   * elementu i POD jego treścią liniową — więc etykieta zostaje czytelna
+   * bez opakowywania jej w dodatkowy `<span>`.
+   */
+  z-index: -1;
+  /*
+   * 250 % szerokości przy proporcji 1:1. Promień koła musi pokryć przekątną
+   * przycisku liczoną z najdalszego rogu — przy 250 % promień to 1,25 ×
+   * szerokość, co starcza dla każdej pigułki (przekątna nigdy nie przekracza
+   * szerokości o więcej niż jej wysokość).
+   */
+  width: 250%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-full);
+  background-color: var(--btn-surface-hover, var(--color-brand));
+  content: '';
+  pointer-events: none;
+  /*
+   * PUŁAPKA (PLAYBOOK P-050, drugie oblicze): wyśrodkowanie MUSI siedzieć
+   * w `transform` razem ze skalą. Zapisane osobno jako `translate: -50% -50%`
+   * minifikator po cichu USUWA, gdy w tej samej regule stoi `transform` — koło
+   * ląduje wtedy rogiem w punkcie kursora zamiast środkiem. Procenty liczą się
+   * od nieprzeskalowanego pudełka, więc przesunięcie jest stałe niezależnie
+   * od skali.
+   */
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform var(--duration-slow) var(--ease-out-expo);
+}
+
+.btn-wipe:hover,
+.btn-wipe:focus-visible,
+/* Gdy przycisk jest tylko wyglądem większego linku, fokus ląduje na linku. */
+a:focus-visible .btn-wipe {
+  color: var(--btn-fg-hover, var(--color-fg));
+}
+
+.btn-wipe:hover::before,
+.btn-wipe:focus-visible::before,
+a:focus-visible .btn-wipe::before {
+  transform: translate(-50%, -50%) scale(1);
+}

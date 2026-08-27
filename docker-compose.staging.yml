@@ -1,0 +1,38 @@
+name: adstic-staging
+
+# Staging etapu 1 dla adstic.madebyslate.dev: build Astro z fixtures, atomowa
+# publikacja do nazwanego wolumenu, serwowanie przez Nginx. Payload i PostgreSQL
+# są celowo nieobecne, dopóki nie wchodzi model treści (etap 2).
+#
+# Osobna nazwa projektu Compose, osobny port hosta i osobny wolumen — stack może
+# działać obok innych stagingów na tym samym hoście Dockera.
+services:
+  website-build:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: website-builder
+    init: true
+    restart: "no"
+    environment:
+      CONTENT_SOURCE: fixtures
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-https://adstic.madebyslate.dev}
+    volumes:
+      - website-dist:/output
+
+  router:
+    image: nginx:1.28-alpine
+    init: true
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-18085}:8080"
+    volumes:
+      - website-dist:/srv/website:ro
+      - ./docker/nginx.staging.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      website-build:
+        condition: service_completed_successfully
+
+volumes:
+  website-dist:
+    name: ${WEBSITE_DIST_VOLUME:-adstic-staging-website-dist}

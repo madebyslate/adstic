@@ -1,0 +1,406 @@
+---
+import type { CaseStudiesBlock } from '@repo/shared'
+import AvatarLink from '@/components/ui/AvatarLink.astro'
+import Picture from '@/components/ui/Picture.astro'
+
+interface Props {
+  block: CaseStudiesBlock
+}
+
+const { block } = Astro.props
+const headingId = 'case-studies-heading'
+
+/*
+ * Kafel zajmuje pół kolumny treści na desktopie, całą poniżej 768 px. Te same
+ * dwie liczby idą do `sizes` i wynikają z siatki, nie z „na wszelki wypadek" —
+ * za szeroki wariant to pobrany plik, którego nikt nie zobaczy.
+ */
+const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
+---
+
+{/*
+  Wejście sekcji. Grupa trzyma wszystkie animacje w środku na pierwszej klatce,
+  dopóki obserwator w BaseLayout nie uzna, że warto ją odegrać — mechanizm jest
+  opisany przy „W polu widzenia" w global.css.
+*/}
+<section class="cases" aria-labelledby={headingId} data-reveal-group>
+  <div class="container-page cases__inner">
+    <p class="cases__eyebrow reveal" style="--reveal-index: 0">{block.eyebrow}</p>
+
+    {/* Etykieta wyżej jest podpisem, nagłówkiem sekcji jest to zdanie. */}
+    <h2 id={headingId} class="cases__heading reveal" style="--reveal-index: 1">{block.heading}</h2>
+
+    <div class="cases__intro">
+      <p class="cases__lead reveal" style="--reveal-index: 2">{block.lead}</p>
+      <AvatarLink link={block.cta} class="cases__cta reveal" style="--reveal-index: 3" />
+    </div>
+
+    {/*
+      `<ul>`, nie `<div>`: to jest lista realizacji, a czytnik ekranu ma usłyszeć
+      ile ich jest. Kafle i wiersze to DWIE listy, bo są dwiema formami
+      wyróżnienia — jedna lista z dwoma wyglądami kłamałaby o strukturze.
+    */}
+    <ul class="cases__grid">
+      {
+        block.featured.map((item, index) => (
+          <li class="reveal" style={`--reveal-index: ${index + 4}`}>
+            <a
+              class="tile"
+              href={item.href}
+              rel={item.external ? 'noopener noreferrer' : undefined}
+              target={item.external ? '_blank' : undefined}
+            >
+              <Picture image={item.thumbnail} widths={[590, 1180]} sizes={TILE_SIZES} />
+
+              <span class="tile__logo">
+                <Picture image={item.logo} widths={[item.logo.width]} sizes={`${item.logo.width}px`} />
+              </span>
+
+              {/*
+                Strzałka wchodzi na hover i na focus klawiaturą — bez tego
+                drugiego link byłby zaznaczony, ale bez afordancji „to wychodzi
+                na zewnątrz". Poza drzewem dostępności: niesie ją już `<a>`.
+              */}
+              <span class="tile__arrow" aria-hidden="true">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5.83203 5.83325H14.1654V14.1666" />
+                  <path d="M5.83203 14.1666L14.1654 5.83325" />
+                </svg>
+              </span>
+
+              <span class="tile__title">{item.title}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    {
+      block.more.length > 0 && (
+        <ul class="cases__list">
+          {block.more.map((item, index) => (
+            <li class="reveal" style={`--reveal-index: ${index + 5}`}>
+              <a
+                class="row"
+                href={item.href}
+                rel={item.external ? 'noopener noreferrer' : undefined}
+                target={item.external ? '_blank' : undefined}
+              >
+                <span class="row__logo">
+                  <Picture
+                    image={item.logo}
+                    widths={[64, 128]}
+                    sizes="64px"
+                  />
+                </span>
+
+                <span class="row__title">{item.title}</span>
+
+                <span class="row__arrow" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5.83203 5.83325H14.1654V14.1666" />
+                    <path d="M5.83203 14.1666L14.1654 5.83325" />
+                  </svg>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  /*
+    Pion sekcji siedzi na `__inner`, nie na `<section>`: kreska ma być NAD
+    odstępem, czyli przy samej krawędzi kolumny treści. Gdyby padding był
+    na sekcji, border poszedłby na całą szerokość okna.
+  */
+  .cases__inner {
+    border-block-start: 1px solid var(--color-border-rule);
+    padding-block: var(--section-padding-y);
+  }
+
+  .cases__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-5);
+    color: var(--color-fg);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-wide);
+    line-height: var(--leading-tight);
+    text-transform: uppercase;
+  }
+
+  .cases__eyebrow::before {
+    content: '';
+    width: var(--space-1);
+    height: var(--space-1);
+    background-color: var(--color-brand);
+  }
+
+  .cases__heading {
+    margin: 0 0 var(--space-4);
+    color: var(--color-fg);
+    font-family: var(--font-heading);
+    /* 48 px dotyczy desktopu — na 390 px zostawiałoby dwa słowa w wierszu. */
+    font-size: var(--text-4xl);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--leading-snug);
+  }
+
+  /*
+    Zdanie i przycisk stoją w jednym wierszu, ale to NIE jest siatka: przycisk
+    ma zostać przy prawej krawędzi niezależnie od tego, na ile wierszy złamie
+    się zdanie. Stąd `space-between`, a nie kolumny.
+  */
+  .cases__intro {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-5);
+    margin-block-end: var(--space-7);
+  }
+
+  .cases__lead {
+    /* Ta sama szerokość co zdanie w HowWeWork — łamie się jak w złożeniu. */
+    max-width: var(--steps-lead-width);
+    margin: 0;
+    color: var(--color-fg-muted);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--leading-normal);
+  }
+
+  .cases__cta {
+    flex: none;
+  }
+
+  /* ── Kafle ──────────────────────────────────────────────────────────────── */
+
+  .cases__grid,
+  .cases__list {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    gap: var(--grid-gap);
+    list-style: none;
+  }
+
+  .cases__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-block-end: var(--grid-gap);
+  }
+
+  .tile {
+    position: relative;
+    display: block;
+    /*
+      `overflow: hidden` zamiast promienia na kadrze i na gradiencie osobno —
+      klient podał `border-radius: 0 0 12px 12px` dla przeciemnienia właśnie po
+      to, żeby nie wystawało poza kafel. Przycięcie w jednym miejscu robi to
+      samo i nie rozjeżdża się, gdy promień kafla kiedyś się zmieni.
+    */
+    overflow: hidden;
+    border-radius: var(--radius-media);
+    aspect-ratio: var(--case-tile-ratio);
+    color: var(--color-fg);
+    text-decoration: none;
+  }
+
+  /* Sam kadr, nie logo — dlatego dziecko bezpośrednie, a nie dowolny `img`. */
+  .tile > :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /*
+    Przeciemnienie pod tytułem. Pseudoelement, nie osobny węzeł: to czysta
+    warstwa malarska, więc nie ma po co trzymać jej w HTML-u.
+
+    PUŁAPKA: musi to być `::before`, nie `::after`. Wszystkie warstwy kafla są
+    `position: absolute` i mają `z-index: auto`, więc o kolejności malowania
+    decyduje kolejność w drzewie — `::after` jest OSTATNIM dzieckiem i zamalowałby
+    tytuł oraz strzałkę, zamiast leżeć pod nimi.
+  */
+  .tile::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    /*
+      210 px to wartość z desktopu, gdzie kafel ma 516 px wysokości — czyli
+      41 % kadru. Na 390 px kafel ma 299 px i te same 210 px zjadłyby 70 %
+      zdjęcia. `min()` trzyma OBIE reguły: stałą wysokość, dopóki mieści się
+      w udziale z makiety, i ten udział poniżej.
+    */
+    height: min(var(--case-tile-scrim-height), var(--case-tile-scrim-ratio));
+    /* Nie zasłania linku — kafel jest jednym `<a>`, ale to i tak tańsze niż
+       zdejmowanie zdarzeń dopiero na poziomie tytułu. */
+    pointer-events: none;
+    background: var(--case-tile-scrim);
+  }
+
+  .tile__logo {
+    position: absolute;
+    inset-block-start: var(--space-5);
+    inset-inline-start: var(--space-5);
+    display: block;
+  }
+
+  /*
+    Loga klientów mają różne proporcje i idą w rozmiarze własnym — jedna
+    narzucona wysokość zrobiłaby z kwadratowego Apimela znaczek, a z poziomego
+    Tandemy pas przez pół kafla. Cap pilnuje tylko górnej granicy.
+  */
+  .tile__logo :global(img) {
+    width: auto;
+    height: auto;
+    max-width: var(--case-tile-logo-max-width);
+    max-height: var(--case-tile-logo-max-height);
+    object-fit: contain;
+  }
+
+  .tile__arrow,
+  .row__arrow {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: var(--case-arrow-size);
+    height: var(--case-arrow-size);
+    border-radius: var(--radius-full);
+    color: var(--color-fg);
+  }
+
+  .tile__arrow :global(svg),
+  .row__arrow :global(svg) {
+    width: var(--case-arrow-icon-size);
+    height: var(--case-arrow-icon-size);
+  }
+
+  .tile__arrow {
+    position: absolute;
+    inset-block-start: var(--space-5);
+    inset-inline-end: var(--space-5);
+    background-color: var(--case-arrow-bg-media);
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+
+  .tile:hover .tile__arrow,
+  .tile:focus-visible .tile__arrow {
+    opacity: 1;
+  }
+
+  .tile__title {
+    position: absolute;
+    inset-block-end: var(--space-5);
+    inset-inline: var(--space-5);
+    max-width: var(--case-title-width);
+    /*
+      Makieta mówi 600. Shipujemy wyłącznie 400 i 500 (patrz `--font-weight-bold`
+      w tokenach), a 600 wywołałoby syntetyczne pogrubienie przeglądarki —
+      zostaje 500 do czasu dostarczenia pliku fontu. CaseStudies.spec.md.
+    */
+    font-size: var(--case-title-size);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-normal);
+  }
+
+  /* ── Lista pozostałych ──────────────────────────────────────────────────── */
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: var(--case-row-gap);
+    padding: var(--space-2);
+    border-radius: var(--radius-media);
+    background-color: var(--case-row-bg);
+    color: var(--color-fg);
+    text-decoration: none;
+    transition: background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  .row:hover {
+    background-color: var(--case-row-bg-hover);
+  }
+
+  .row__logo {
+    display: block;
+    flex: none;
+    width: var(--case-row-logo-size);
+    height: var(--case-row-logo-size);
+    overflow: hidden;
+    border-radius: var(--radius-card);
+  }
+
+  .row__logo :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .row__title {
+    flex: 1;
+    font-size: var(--case-title-size);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-normal);
+  }
+
+  /*
+    Strzałka wiersza stoi 16 px od krawędzi, a nie 8 px jak logo — padding
+    wiersza dotyczy logo, bo to ono ustala jego wysokość. Różnicę dokłada
+    margines, żeby `padding` pozostał jedną liczbą z makiety.
+  */
+  .row__arrow {
+    margin-inline-end: var(--space-2);
+    /*
+      `backdrop-filter: blur()` z makiety jest tu no-opem: pod strzałką leży
+      jednolita plama `--case-row-bg`, więc rozmycie nie ma czego rozmywać
+      (PLAYBOOK P-015). Zostaje sam kolor.
+    */
+    background-color: var(--color-control-ghost);
+  }
+
+  /* ── Breakpointy ────────────────────────────────────────────────────────── */
+
+  @media (max-width: 767px) {
+    .cases__heading {
+      font-size: var(--text-3xl);
+    }
+
+    .cases__grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    /*
+      Na wąskim ekranie strzałka nie ma jak się „pojawić" — nie ma hovera.
+      Stąd stan domyślny widoczny, nie ukryty.
+    */
+    .tile__arrow {
+      opacity: 1;
+    }
+
+    .row__title {
+      font-size: var(--text-base);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /*
+      Strzałka dalej WCHODZI na hover — znika tylko przejście. Ukrycie zmiany
+      stanu zabrałoby afordancję, a to nie jest ruch, tylko informacja.
+    */
+    .tile__arrow,
+    .row {
+      transition-duration: 0.01ms;
+    }
+  }
+</style>

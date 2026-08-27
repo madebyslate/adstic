@@ -1,0 +1,98 @@
+# Adstic — stack produkcyjny xCloud.
+#
+# Publiczny jest wyłącznie `router`. Port Payloada 3000 i port Nginx 8080 są
+# wewnętrzne i mogą się powtarzać między projektami — unikalny musi być
+# wyłącznie APP_PORT publikowany na hoście (standard xCloud §10).
+
+services:
+  payload:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: payload-runtime
+    init: true
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in xCloud}
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?Set PAYLOAD_SECRET in xCloud}
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:?Set PUBLIC_SITE_URL in xCloud}
+      DEPLOY_HOOK_URL: ${DEPLOY_HOOK_URL:-}
+      STATIC_BUILD_TOKEN: ${STATIC_BUILD_TOKEN:-}
+      PAYLOAD_MEDIA_DIR: /app/apps/cms/media
+    volumes:
+      - payload-media:/app/apps/cms/media
+    networks:
+      - app-network
+      - postgres-network
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          const net=require('net');
+          const s=net.connect(3000,'127.0.0.1',()=>{s.end();process.exit(0)});
+          s.on('error',()=>process.exit(1));
+          setTimeout(()=>process.exit(1),4000)
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  website-build:
+    # Profil `build` sprawia, że automatyczne `docker compose up` platformy nie
+    # odpali statycznego buildu przed migracjami. Jawne
+    # `docker compose run website-build` nadal działa.
+    profiles:
+      - build
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: website-builder
+    init: true
+    restart: "no"
+    environment:
+      # Etap 1: fixtures — build nie potrzebuje CMS-a.
+      # Etap 2: ustaw CONTENT_SOURCE=payload w .env xCloud.
+      CONTENT_SOURCE: ${CONTENT_SOURCE:-fixtures}
+      # Prywatny adres tylko do buildu; nigdy nie trafia do HTML.
+      PAYLOAD_API_URL: http://payload:3000/api
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:?Set PUBLIC_SITE_URL in xCloud}
+      STATIC_BUILD_TOKEN: ${STATIC_BUILD_TOKEN:-}
+    volumes:
+      - website-dist:/output
+    networks:
+      - app-network
+    depends_on:
+      payload:
+        condition: service_healthy
+
+  router:
+    image: nginx:1.28-alpine
+    init: true
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:?Set a unique APP_PORT}:8080"
+    volumes:
+      - website-dist:/srv/website:ro
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/proxy_params:/etc/nginx/proxy_params:ro
+    networks:
+      - app-network
+    depends_on:
+      payload:
+        condition: service_healthy
+
+volumes:
+  payload-media:
+    name: ${PAYLOAD_MEDIA_VOLUME:?Set a stable PAYLOAD_MEDIA_VOLUME}
+  website-dist:
+    name: ${WEBSITE_DIST_VOLUME:?Set a stable WEBSITE_DIST_VOLUME}
+
+networks:
+  app-network:
+    driver: bridge
+  postgres-network:
+    external: true
+    name: ${POSTGRES_NETWORK:-phobos-internal}

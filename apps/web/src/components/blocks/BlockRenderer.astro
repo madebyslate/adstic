@@ -1,0 +1,73 @@
+---
+import type { Block } from '@repo/shared'
+import AdPlacements from './AdPlacements.astro'
+import CaseStudies from './CaseStudies.astro'
+import Contact from './Contact.astro'
+import Cta from './Cta.astro'
+import CustomerReviews from './CustomerReviews.astro'
+import Faq from './Faq.astro'
+import Hero from './Hero.astro'
+import HowWeWork from './HowWeWork.astro'
+import OurImpact from './OurImpact.astro'
+import TrustedBy from './TrustedBy.astro'
+import VideoReviews from './VideoReviews.astro'
+import WhoWeAre from './WhoWeAre.astro'
+import WhyChooseUs from './WhyChooseUs.astro'
+
+interface Props {
+  blocks: Block[]
+}
+
+const { blocks } = Astro.props
+
+/**
+ * Mapa `blockType` → komponent, rozpisana jako `switch`, a nie obiekt-rejestr.
+ *
+ * PUŁAPKA (PLAYBOOK P-016): rejestr `{ hero: Hero, trustedBy: TrustedBy }`
+ * działa dokładnie do drugiego bloku. Przy jednym wariancie `registry[…]` ma
+ * jeden typ; przy dwóch jest to UNIA komponentów, więc TypeScript przecina ich
+ * propsy — a przecięcie dwóch `block` z różnymi literałami `blockType` to
+ * `never`. `switch` zawęża `block` po dyskryminatorze, więc każdy komponent
+ * dostaje dokładnie swój wariant.
+ *
+ * Gałąź `default` nie jest martwym kodem: przypisanie do `never` jest tym, co
+ * wywala `pnpm typecheck`, gdy ktoś doda blok do unii i zapomni o komponencie.
+ */
+---
+
+{
+  blocks.map((block) => {
+    switch (block.blockType) {
+      case 'hero':
+        return <Hero block={block} />
+      case 'trustedBy':
+        return <TrustedBy block={block} />
+      case 'whoWeAre':
+        return <WhoWeAre block={block} />
+      case 'ourImpact':
+        return <OurImpact block={block} />
+      case 'caseStudies':
+        return <CaseStudies block={block} />
+      case 'adPlacements':
+        return <AdPlacements block={block} />
+      case 'howWeWork':
+        return <HowWeWork block={block} />
+      case 'cta':
+        return <Cta block={block} />
+      case 'whyChooseUs':
+        return <WhyChooseUs block={block} />
+      case 'customerReviews':
+        return <CustomerReviews block={block} />
+      case 'videoReviews':
+        return <VideoReviews block={block} />
+      case 'faq':
+        return <Faq block={block} />
+      case 'contact':
+        return <Contact block={block} />
+      default: {
+        const exhaustive: never = block
+        return exhaustive
+      }
+    }
+  })
+}

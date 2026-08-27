@@ -1,0 +1,315 @@
+---
+import type { TrustedByBlock } from '@repo/shared'
+import { resolveVector } from '@/lib/media'
+
+interface Props {
+  block: TrustedByBlock
+}
+
+const { block } = Astro.props
+const headingId = 'trusted-by-heading'
+const { quote, author } = block.testimonial
+
+/*
+ * Dwa pasy: pierwsza połowa listy u góry, druga u dołu — tak jak w makiecie.
+ * Przy jednym logotypie podział dałby pusty dolny pas, więc wtedy oba dostają
+ * tę samą listę. To stan przejściowy: brakuje 9 z 10 plików (patrz spec).
+ */
+const half = Math.ceil(block.logos.length / 2)
+const rows =
+  block.logos.length > 1 ? [block.logos.slice(0, half), block.logos.slice(half)] : [block.logos, block.logos]
+
+/*
+ * Marquee bez JS: tor zawiera całkowitą liczbę kopii listy i przesuwa się
+ * dokładnie o jedną kopię, więc pętla domyka się bez skoku. Kopii musi być
+ * tyle, żeby tor był wyraźnie szerszy od ekranu — inaczej pas kończy się
+ * pustką. 12 kafli to zapas na 1440 px przy kaflu 160 px (widać 5).
+ */
+const MIN_TILES_PER_TRACK = 12
+
+const tracks = rows.map((logos) => {
+  const copies = Math.max(2, Math.ceil(MIN_TILES_PER_TRACK / logos.length))
+  return {
+    logos,
+    copies,
+    /*
+      Czas trwania odmierza JEDNĄ kopię, bo o tyle przesuwa się tor w cyklu —
+      pomnożenie przez liczbę kopii spowolniłoby pas dokładnie tyle razy, ile
+      kopii dołożył zapas na szerokość ekranu. Prędkość ma zależeć wyłącznie od
+      rozmiaru kafla, więc mnożymy przez długość listy, nie przez długość toru.
+    */
+    tilesPerCopy: logos.length,
+  }
+})
+---
+
+{/*
+  Wejście sekcji. Grupa trzyma wszystkie animacje w środku na pierwszej klatce,
+  dopóki obserwator w BaseLayout nie uzna, że warto ją odegrać — mechanizm jest
+  opisany przy „W polu widzenia" w global.css.
+*/}
+<section class="trusted" aria-labelledby={headingId} data-reveal-group>
+  <div class="container-page">
+    {/*
+      Etykieta sekcji jest jej nagłówkiem, nie ozdobnikiem — stąd <h2>,
+      a nie <p>. Czerwony kwadracik to ::before, więc nie wchodzi do drzewa
+      dostępności i nie da się go zaznaczyć razem z tekstem.
+    */}
+    <h2 id={headingId} class="trusted__eyebrow reveal" style="--reveal-index: 0">{block.eyebrow}</h2>
+
+    <div class="trusted__grid">
+      <figure class="quote reveal" style="--reveal-index: 1">
+        <blockquote class="quote__text">
+          <p>{quote}</p>
+        </blockquote>
+
+        <figcaption class="quote__author">
+          <span class="quote__name">{author.name}</span>
+          {
+            author.role && (
+              <span class="quote__role">
+                {/* Ukośnik jest z makiety, nie z danych — dlatego w szablonie. */}
+                <span aria-hidden="true">/ </span>
+                {author.role}
+              </span>
+            )
+          }
+        </figcaption>
+      </figure>
+
+      <div class="wall reveal-fade" style="--reveal-index: 2">
+        {
+          tracks.map((track, rowIndex) => (
+            <div class="wall__row">
+              {/*
+                Kolejność w torze nie niesie treści, a kopie są duplikatem —
+                dlatego lista jako całość jest poza drzewem dostępności, a nazwy
+                marek czytnik dostaje raz, z ukrytej listy pod spodem.
+              */}
+              <ul
+                class="wall__track"
+                data-reverse={rowIndex % 2 === 1 ? '' : undefined}
+                style={`--marquee-copies: ${track.copies}; --marquee-tiles: ${track.tilesPerCopy}`}
+                aria-hidden="true"
+              >
+                {Array.from({ length: track.copies }, () =>
+                  track.logos.map((logo) => (
+                    <li class="wall__tile">
+                      <img
+                        src={resolveVector(logo)}
+                        alt=""
+                        width={logo.width}
+                        height={logo.height}
+                        loading="lazy"
+                        decoding="async"
+                        draggable={false}
+                      />
+                    </li>
+                  )),
+                )}
+              </ul>
+            </div>
+          ))
+        }
+
+        <ul class="sr-only">
+          {block.logos.map((logo) => (
+            <li>{logo.alt}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .trusted {
+    padding-block: var(--section-padding-y);
+    /* Tło jest tłem strony — sekcja go nie maluje, patrz TrustedBy.spec.md. */
+  }
+
+  .trusted__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-5);
+    color: var(--color-fg);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-wide);
+    line-height: var(--leading-tight);
+    text-transform: uppercase;
+  }
+
+  .trusted__eyebrow::before {
+    content: '';
+    width: var(--space-1);
+    height: var(--space-1);
+    background-color: var(--color-brand);
+  }
+
+  .trusted__grid {
+    /*
+      Szerokość ściany wynika z liczby kafli, nie odwrotnie — kafel jest
+      jednostką rytmu i nie skaluje się z ekranem, zmienia się tylko liczba
+      widocznych.
+    */
+    --wall-width: calc(
+      var(--logo-wall-columns) * var(--logo-tile-size) + (var(--logo-wall-columns) - 1) *
+        var(--logo-tile-gap)
+    );
+
+    display: grid;
+    gap: var(--logo-tile-gap);
+
+    /*
+      Płyta sekcji: jedno tło pod opinią I pod kaflami, na całą szerokość
+      kolumny. Kafle leżą NA niej, więc 2 px paddingu i 2 px odstępów są tym
+      samym prześwitem — dlatego opinia nie ma własnego tła ani promienia.
+      Promień 10 px = 8 px kafla + 2 px płyty, czyli krzywe są współśrodkowe.
+    */
+    padding: var(--logo-tile-gap);
+    border-radius: var(--radius-card);
+    background-color: var(--color-surface-sunken);
+  }
+
+  /* ── Opinia ─────────────────────────────────────────────────────────────── */
+
+  .quote {
+    display: flex;
+    flex-direction: column;
+    /* Cytat u góry, autor przy dolnej krawędzi — box jest wyższy niż treść. */
+    justify-content: space-between;
+    gap: var(--space-6);
+    margin: 0;
+    /* Prawa strona nie dostaje własnego paddingu — tam prześwit robi płyta. */
+    padding: var(--quote-padding);
+  }
+
+  .quote__text {
+    margin: 0;
+    color: var(--color-fg-muted);
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--leading-relaxed);
+  }
+
+  .quote__text p {
+    margin: 0;
+  }
+
+  /* Cudzysłowy są typografią, nie treścią — inaczej redaktor musiałby pamiętać
+     o właściwym znaku, a czytnik ekranu czytałby je jako „cudzysłów". */
+  .quote__text p::before {
+    content: '\201C';
+  }
+
+  .quote__text p::after {
+    content: '\201D';
+  }
+
+  .quote__author {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    color: var(--color-fg);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--leading-normal);
+  }
+
+  .quote__role {
+    opacity: 0.6;
+  }
+
+  /* ── Ściana logotypów ───────────────────────────────────────────────────── */
+
+  .wall {
+    display: grid;
+    gap: var(--logo-tile-gap);
+    width: min(100%, var(--wall-width));
+    /*
+      Kafel ucięty w pół na krawędzi pasa ma róg prosty i wchodziłby w
+      zaokrąglenie płyty. Promień jest ten sam co kafla, więc na rogach obie
+      krzywe się pokrywają.
+    */
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    /* Bez tego tor (max-content, kilkanaście kafli) rozpycha kolumnę siatki —
+       `overflow: hidden` obcina RYSUNEK, ale nie zgłaszaną szerokość. */
+    min-width: 0;
+  }
+
+  .wall__row {
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .wall__track {
+    display: flex;
+    gap: var(--logo-tile-gap);
+    width: max-content;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    /*
+      Animowany jest wyłącznie `translate` (AGENT-RULES §6) — bez layoutu
+      i bez malowania. Przesuw o dokładnie jedną kopię listy zamyka pętlę:
+      klatka końcowa jest pikselowo tożsama z początkową.
+    */
+    animation: marquee calc(var(--marquee-tiles) * var(--marquee-tile-duration)) linear infinite;
+  }
+
+  .wall__track[data-reverse] {
+    animation-direction: reverse;
+  }
+
+  @keyframes marquee {
+    from {
+      translate: 0 0;
+    }
+    to {
+      translate: calc(-100% / var(--marquee-copies)) 0;
+    }
+  }
+
+  /*
+   * Globalna reguła z global.css skraca czas do 0,01 ms, co przy pętli zostawia
+   * pas na klatce końcowej — a ta jest tożsama z początkową, więc kadr się
+   * zgadza. Wyłączamy mimo to wprost, żeby nie polegać na tej tożsamości.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .wall__track {
+      animation: none;
+    }
+  }
+
+  .wall__tile {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: var(--logo-tile-size);
+    height: var(--logo-tile-size);
+    padding: var(--space-5);
+    border-radius: var(--radius-md);
+    background-color: var(--color-surface-raised);
+  }
+
+  .wall__tile img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+  }
+
+  @media (min-width: 1024px) {
+    .trusted__grid {
+      /* Ściana ma swój wymiar, opinia bierze resztę. Kolumna jest podana
+         wprost, nie `auto` — `auto` zmierzyłby tor, nie okno pasa. */
+      grid-template-columns: minmax(var(--quote-min-width), 1fr) minmax(0, var(--wall-width));
+    }
+  }
+</style>

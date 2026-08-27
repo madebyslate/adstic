@@ -1,0 +1,21 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro'
+
+const seo = {
+  title: 'Nie znaleziono strony — Adstic',
+  description: 'Strona pod tym adresem nie istnieje.',
+  noindex: true,
+}
+---
+
+<BaseLayout seo={seo} path="/404/">
+  <div class="container-page py-10">
+    <h1 class="text-3xl">Nie znaleziono strony</h1>
+    <p class="mt-4 text-fg-muted">
+      Adres jest nieaktualny albo zawiera literówkę.
+    </p>
+    <p class="mt-6">
+      <a class="underline" href="/">Wróć na stronę główną</a>
+    </p>
+  </div>
+</BaseLayout>

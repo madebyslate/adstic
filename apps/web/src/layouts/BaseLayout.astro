@@ -1,0 +1,164 @@
+---
+import type { Seo } from '@repo/shared'
+import Seo_ from '@/components/layout/Seo.astro'
+import Header from '@/components/layout/Header.astro'
+import Footer from '@/components/layout/Footer.astro'
+import '@/styles/global.css'
+
+interface Props {
+  seo: Seo
+  path: string
+}
+
+const { seo, path } = Astro.props
+---
+
+<!doctype html>
+<html lang="pl" class="no-js">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="generator" content={Astro.generator} />
+
+    {/*
+      Znacznik obecności JS ustawiany zanim cokolwiek się wyrenderuje — dzięki
+      temu stany początkowe animacji wchodzą TYLKO gdy jest czym je zakończyć.
+      Bez JS treść zostaje widoczna (AGENT-RULES §6, progressive enhancement).
+    */}
+    <script is:inline>
+      document.documentElement.classList.remove('no-js')
+      document.documentElement.classList.add('js')
+    </script>
+
+    <Seo_ seo={seo} path={path} />
+
+    <slot name="head" />
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">Przejdź do treści</a>
+
+    <Header />
+
+    <main id="main">
+      <slot />
+    </main>
+
+    <Footer />
+
+    {/*
+      Choreografia scrolla. ~0,3 KB, jeden obserwator na całą stronę: każda
+      sekcja oznaczona `data-reveal-group` trzyma swoje wejście na pierwszej
+      klatce (trzyma je CSS — patrz „W polu widzenia" w global.css), dopóki nie
+      jest dość blisko, żeby warto ją było odegrać.
+
+      `-15%` na dolnej krawędzi, żeby sekcja ruszała, gdy jej górny brzeg jest
+      już kawałek w ekranie, a nie w chwili, gdy pojawia się jej pierwszy piksel
+      — inaczej animacja kończy się, zanim użytkownik do niej doscrolluje.
+      Obserwator odpina każdą grupę po zadziałaniu; nic nie odtwarza się
+      ponownie przy scrollu w górę.
+    */}
+    <script>
+      const groups = document.querySelectorAll<HTMLElement>('[data-reveal-group]')
+
+      if (groups.length) {
+        // Baseline od 2019, ale brak obserwatora ma odsłonić stronę, a nie ją ukryć.
+        if (!('IntersectionObserver' in window)) {
+          groups.forEach((group) => group.setAttribute('data-inview', ''))
+        } else {
+          const observer = new IntersectionObserver(
+            (entries) => {
+              for (const entry of entries) {
+                if (!entry.isIntersecting) continue
+                entry.target.setAttribute('data-inview', '')
+                observer.unobserve(entry.target)
+              }
+            },
+            { rootMargin: '0px 0px -15% 0px' },
+          )
+          groups.forEach((group) => observer.observe(group))
+        }
+      }
+    </script>
+
+    {/*
+      Punkt wejścia kursora dla przycisków (`.btn-wipe` w global.css). ~0,3 KB.
+
+      Dwa listenery na `document` w fazie PRZECHWYTYWANIA, nie po jednym na
+      przycisk: `pointerenter`/`pointerleave` nie bąbelkują, ale faza
+      przechwytywania i tak przechodzi przez `document` w drodze do celu.
+      Dzięki temu działa też na przyciskach, których w tym momencie nie ma
+      jeszcze w DOM-ie, i nie trzeba niczego odpinać.
+
+      Świadomie NIE słuchamy `pointermove`: koło ma wyjść z punktu wejścia
+      i tam wrócić, a nie gonić kursor. Bez skryptu zostaje środek przycisku,
+      czyli efekt jest ten sam, tylko symetryczny.
+    */}
+    <script>
+      const rememberPointer = (event: PointerEvent) => {
+        const target = event.target
+        if (!(target instanceof Element)) return
+
+        const button = target.closest<HTMLElement>('.btn-wipe')
+        if (!button) return
+
+        const box = button.getBoundingClientRect()
+        button.style.setProperty('--btn-x', `${event.clientX - box.left}px`)
+        button.style.setProperty('--btn-y', `${event.clientY - box.top}px`)
+      }
+
+      document.addEventListener('pointerenter', rememberPointer, true)
+      document.addEventListener('pointerleave', rememberPointer, true)
+    </script>
+
+    {/*
+      Lenis wygładza scroll kółkiem, zostawiając scroll dotykowy natywnym.
+      Nadal aktualizuje prawdziwą pozycję scrolla przeglądarki, więc `position:
+      sticky` i osie czasu `view()` mają jedno źródło prawdy.
+
+      Odstępstwo od AGENT-RULES §7 („bez Lenis chyba że zatwierdzone") —
+      zatwierdzone, patrz DECISIONS.md. Silnik jedzie dynamicznym importem poza
+      głównym bundlem, a użytkownik z `prefers-reduced-motion: reduce` nie
+      pobiera go w ogóle.
+    */}
+    <script>
+      type LenisInstance = import('lenis').default
+
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+      let lenis: LenisInstance | undefined
+      let loading: Promise<void> | undefined
+
+      const enableSmoothScroll = () => {
+        if (reducedMotion.matches || lenis || loading) return
+
+        loading = import('lenis').then(({ default: Lenis }) => {
+          loading = undefined
+          if (reducedMotion.matches || lenis) return
+
+          lenis = new Lenis({
+            autoRaf: true,
+            anchors: true,
+            lerp: 0.1,
+            smoothWheel: true,
+            syncTouch: false,
+            wheelMultiplier: 1,
+          })
+        })
+      }
+
+      const disableSmoothScroll = () => {
+        lenis?.destroy()
+        lenis = undefined
+      }
+
+      enableSmoothScroll()
+
+      reducedMotion.addEventListener('change', () => {
+        if (reducedMotion.matches) disableSmoothScroll()
+        else enableSmoothScroll()
+      })
+    </script>
+  </body>
+</html>

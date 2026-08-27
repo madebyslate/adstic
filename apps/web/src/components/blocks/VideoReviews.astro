@@ -1,0 +1,722 @@
+---
+import type { VideoReviewsBlock } from '@repo/shared'
+import Picture from '@/components/ui/Picture.astro'
+
+interface Props {
+  block: VideoReviewsBlock
+}
+
+const { block } = Astro.props
+const headingId = 'video-reviews-heading'
+const trackId = 'video-reviews-track'
+
+/*
+ * Strzałka „w przód" z makiety. Wstecz to ten sam rysunek obrócony w CSS —
+ * dwa `<path>` różniące się znakiem byłyby dwiema wersjami tej samej prawdy.
+ */
+const CHEVRON = 'M1 13L7 7L1 1'
+---
+
+{/*
+  Wejście sekcji. Grupa trzyma wszystkie animacje w środku na pierwszej klatce,
+  dopóki obserwator w BaseLayout nie uzna, że warto ją odegrać — mechanizm jest
+  opisany przy „W polu widzenia" w global.css.
+*/}
+<section class="vreviews" aria-labelledby={headingId} data-reveal-group>
+  <div class="container-page vreviews__intro">
+    {/* Etykieta jest akapitem, nie nagłówkiem — sekcja ma mieć jeden tytuł. */}
+    <p class="vreviews__eyebrow reveal" style="--reveal-index: 0">{block.eyebrow}</p>
+    <h2 id={headingId} class="vreviews__heading reveal" style="--reveal-index: 1">{block.heading}</h2>
+  </div>
+
+  <div class="container-page">
+    {/*
+      Karuzela jest zwykłym kontenerem ze `scroll-snap`: palcem, gładzikiem
+      i klawiaturą działa bez linijki skryptu. Strzałki poniżej są dodatkiem,
+      dlatego startują ukryte i odsłania je dopiero skrypt.
+    */}
+    <ul
+      class="vreviews__track"
+      id={trackId}
+      data-track
+      tabindex="0"
+      role="list"
+      aria-label={block.heading}
+    >
+      {
+        block.reviews.map((review, index) => (
+          <li class="vreviews__item reveal" style={`--reveal-index: ${index + 2}`} data-card>
+            <figure class="vcard">
+              <div class="vcard__media">
+                {/*
+                  W kafelku NIE MA elementu <video>. Odtwarzanie 380-pikselowego
+                  kadru w miejscu wyglądało źle, a pełny ekran rozjeżdżał się
+                  podwójnie: `object-fit: cover` przycinał i rozdmuchiwał kadr,
+                  a sąsiednie kafle wychodziły NAD warstwę pełnoekranową. Kafel
+                  jest więc plakatem z przyciskiem, a nagranie gra w lightboxie
+                  pod listą (jedno <video> na całą sekcję).
+
+                  Poster idzie przez astro:assets (AVIF/WebP i warianty
+                  szerokości) — atrybut `poster` przyjąłby jeden goły URL,
+                  czyli oddałby te trzy rzeczy za nic.
+                */}
+                <Picture
+                  class="vcard__poster"
+                  image={review.video.poster}
+                  widths={[380, 760]}
+                  sizes="(min-width: 1024px) 380px, (min-width: 768px) 45vw, 85vw"
+                />
+
+                {/*
+                  Bez skryptu to jest link do pliku wideo — działa, tylko
+                  otwiera nagranie osobno. Skrypt przechwytuje kliknięcie
+                  i podaje to samo źródło lightboxowi. Źródła nagrania wiszą
+                  na wyzwalaczu w `data-sources`, bo w kafelku nie ma już
+                  elementu, z którego dałoby się je odczytać.
+                */}
+                <a
+                  class="vcard__play"
+                  href={review.video.sources[0]!.src}
+                  data-play
+                  data-sources={JSON.stringify(review.video.sources)}
+                  aria-label={`${review.author} — play video review`}
+                >
+                  <svg
+                    class="vcard__play-icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path
+                      d="M5 5.00059C4.9999 4.64868 5.09265 4.30298 5.26888 3.99838C5.44512 3.69379 5.69861 3.44108 6.00375 3.26579C6.30889 3.09049 6.65488 2.99882 7.00679 3.00001C7.3587 3.00121 7.70406 3.09523 8.008 3.27259L20.005 10.2706C20.3078 10.4463 20.5591 10.6983 20.7339 11.0016C20.9088 11.3049 21.0009 11.6487 21.0012 11.9987C21.0015 12.3488 20.91 12.6928 20.7357 12.9963C20.5614 13.2999 20.3105 13.5524 20.008 13.7286L8.008 20.7286C7.70406 20.906 7.3587 21 7.00679 21.0012C6.65488 21.0024 6.30889 20.9107 6.00375 20.7354C5.69861 20.5601 5.44512 20.3074 5.26888 20.0028C5.09265 19.6982 4.9999 19.3525 5 19.0006V5.00059Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                </a>
+              </div>
+
+              {/*
+                `<figcaption>` musi być dzieckiem `<figure>`, nie kadru — stąd
+                plakietka pozycjonowana względem KAFLA, a jej odsunięcie to
+                suma paddingu kafla i paddingu treści w kadrze.
+              */}
+              <figcaption class="vcard__name">{review.author}</figcaption>
+            </figure>
+          </li>
+        ))
+      }
+    </ul>
+
+    <div class="vreviews__footer reveal" style="--reveal-index: 5">
+      {/*
+        Kreska ze wskaźnikiem. Ozdobą jest sama kreska, ale POZYCJA flary to
+        stan karuzeli — dlatego jedzie osią przewijania, nie zegarem (inaczej
+        niż bliźniacza kreska w WhoWeAre).
+      */}
+      <div class="vreviews__rail" aria-hidden="true">
+        <span class="vreviews__flare"></span>
+      </div>
+
+      <div class="vreviews__nav" hidden data-nav>
+        <button
+          class="vreviews__arrow"
+          type="button"
+          data-step="-1"
+          aria-controls={trackId}
+          aria-label={block.previousLabel}
+          title={block.previousLabel}
+        >
+          <svg class="vreviews__arrow-icon" viewBox="0 0 8 14" aria-hidden="true" focusable="false">
+            <path
+              d={CHEVRON}
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              fill="none"
+            />
+          </svg>
+        </button>
+
+        <button
+          class="vreviews__arrow"
+          type="button"
+          data-step="1"
+          aria-controls={trackId}
+          aria-label={block.nextLabel}
+          title={block.nextLabel}
+        >
+          <svg class="vreviews__arrow-icon" viewBox="0 0 8 14" aria-hidden="true" focusable="false">
+            <path
+              d={CHEVRON}
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              fill="none"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {/*
+    Lightbox na natywnym <dialog>: `showModal()` wynosi go do TOP LAYER, więc
+    żaden kafel karuzeli nie ma jak wejść na wierzch — to była druga połowa
+    awarii pełnego ekranu. Escape, pułapka focusu i `::backdrop` przychodzą
+    z elementu, nie ze skryptu.
+
+    Jedno <video> na całą sekcję, a nie jedno na kafel: przeglądarka nigdy nie
+    ma otwartych sześciu dekoderów naraz, a „pauza poprzedniego nagrania"
+    przestaje być regułą do pilnowania — nie ma czego pauzować.
+  */}
+  <dialog class="vlightbox" data-lightbox aria-label={block.heading}>
+    <div class="vlightbox__panel">
+      {/*
+        Krzyżyk stoi w znaczniku PRZED nagraniem: `showModal()` daje focus
+        pierwszemu elementowi w oknie, a to ma być wyjście, nie suwak
+        przewijania filmu.
+      */}
+      <button class="vlightbox__close" type="button" data-lightbox-close>
+        <span class="sr-only">{block.closeLabel}</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path
+            d="M6 6L18 18M18 6L6 18"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            fill="none"></path>
+        </svg>
+      </button>
+
+      <video
+        class="vlightbox__video"
+        controls
+        playsinline
+        preload="none"
+        controlslist="nodownload"
+        data-lightbox-video></video>
+
+      <p class="vlightbox__name" data-lightbox-name></p>
+    </div>
+  </dialog>
+</section>
+
+<script>
+  /*
+   * Trzy rzeczy, których nie ma bez skryptu (uzasadnienie i odrzucone
+   * alternatywy: VideoReviews.spec.md → „Budżet"):
+   *   1. otwarcie nagrania w lightboxie po kliknięciu w przycisk play,
+   *   2. zerwanie pobierania pliku po zamknięciu okna,
+   *   3. wygaszenie strzałki na krańcu listy.
+   *
+   * Kontrakt z HTML-em: bez skryptu karuzela przewija się palcem, gładzikiem
+   * i klawiaturą, a przycisk play jest linkiem do pliku wideo. Strzałki są
+   * wtedy ukryte — kontrolka, która nic nie robi, jest gorsza niż jej brak.
+   */
+  function setupVideoReviews(section: HTMLElement) {
+    const track = section.querySelector<HTMLElement>('[data-track]')
+    const nav = section.querySelector<HTMLElement>('[data-nav]')
+    if (!track || !nav) return
+
+    nav.hidden = false
+
+    const arrows = Array.from(nav.querySelectorAll<HTMLButtonElement>('[data-step]'))
+
+    /*
+     * Krok przewinięcia to szerokość OKNA, nie kafla: na desktopie widać trzy
+     * kafle i strzałka ma przesunąć całą trójkę, na telefonie — jeden.
+     */
+    const update = () => {
+      const max = track.scrollWidth - track.clientWidth
+      /* Luz 1 px: `scrollLeft` bywa ułamkowy przy skalowaniu strony. */
+      for (const arrow of arrows) {
+        const forward = arrow.dataset.step === '1'
+        arrow.disabled = forward ? track.scrollLeft >= max - 1 : track.scrollLeft <= 1
+      }
+    }
+
+    for (const arrow of arrows) {
+      arrow.addEventListener('click', () => {
+        track.scrollBy({ left: Number(arrow.dataset.step) * track.clientWidth })
+      })
+    }
+
+    track.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update, { passive: true })
+    update()
+
+    setupLightbox(section)
+  }
+
+  /*
+   * Odtwarzanie. Osobna funkcja, bo ma prawo NIE wystartować: gdy przeglądarka
+   * nie zna `showModal()`, przyciski play zostają linkami do plików i sekcja
+   * dalej działa — strzałki karuzeli nie mają z tym nic wspólnego i nie mogą
+   * paść razem z lightboxem.
+   */
+  function setupLightbox(section: HTMLElement) {
+    const dialog = section.querySelector<HTMLDialogElement>('[data-lightbox]')
+    const video = section.querySelector<HTMLVideoElement>('[data-lightbox-video]')
+    const name = section.querySelector<HTMLElement>('[data-lightbox-name]')
+    if (!dialog || !video || !name || typeof dialog.showModal !== 'function') return
+
+    const stop = () => {
+      video.pause()
+      /*
+       * Samo `pause()` zostawia otwarte pobieranie: plik leci dalej w tle po
+       * zamknięciu okna. Wyczyszczenie źródeł i `load()` zrywa je natychmiast.
+       */
+      video.replaceChildren()
+      video.removeAttribute('src')
+      video.load()
+    }
+
+    for (const trigger of section.querySelectorAll<HTMLAnchorElement>('[data-play]')) {
+      trigger.addEventListener('click', (event) => {
+        const sources: { src: string; type: string; media?: string }[] = JSON.parse(
+          trigger.dataset.sources ?? '[]',
+        )
+        if (sources.length === 0) return
+
+        /* Dopiero tutaj — jeśli cokolwiek wyżej zawiedzie, link ma zadziałać. */
+        event.preventDefault()
+
+        video.replaceChildren(
+          ...sources.map((source) => {
+            const node = document.createElement('source')
+            node.src = source.src
+            node.type = source.type
+            if (source.media) node.media = source.media
+            return node
+          }),
+        )
+        video.load()
+
+        const label = trigger.closest('[data-card]')?.querySelector('.vcard__name')
+        name.textContent = label?.textContent ?? ''
+
+        dialog.showModal()
+        void video.play()
+      })
+    }
+
+    dialog.addEventListener('close', stop)
+
+    /* Klik w tło zamyka — trafienie w panel przechodzi bokiem. */
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close()
+    })
+
+    dialog
+      .querySelector<HTMLButtonElement>('[data-lightbox-close]')
+      ?.addEventListener('click', () => dialog.close())
+  }
+
+  for (const section of document.querySelectorAll<HTMLElement>('.vreviews')) {
+    setupVideoReviews(section)
+  }
+</script>
+
+<style>
+  .vreviews {
+    padding-block: var(--section-padding-y);
+    /*
+      Oś przewijania karuzeli musi być widoczna dla flary, która NIE jest jej
+      potomkiem. `scroll()` szuka tylko wśród przodków — stąd nazwana oś
+      wypuszczona na całą sekcję.
+    */
+    timeline-scope: --vreviews-scroll;
+  }
+
+  .vreviews__intro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .vreviews__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-5);
+    color: var(--color-fg);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-wide);
+    line-height: var(--leading-tight);
+    text-transform: uppercase;
+  }
+
+  .vreviews__eyebrow::before {
+    content: '';
+    width: var(--space-1);
+    height: var(--space-1);
+    background-color: var(--color-brand);
+  }
+
+  .vreviews__heading {
+    max-width: var(--impact-heading-width);
+    margin: 0 0 var(--space-7);
+    color: var(--color-fg);
+    font-family: var(--font-heading);
+    /* 48 px dotyczy desktopu — na 390 px zostawiałoby dwa słowa w wierszu. */
+    font-size: var(--text-3xl);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--leading-display);
+    text-wrap: balance;
+  }
+
+  /* ── Karuzela ───────────────────────────────────────────────────────────── */
+
+  .vreviews__track {
+    display: grid;
+    grid-auto-flow: column;
+    /* Jeden kafel w oknie; ile ich widać naraz, ustawiają breakpointy niżej. */
+    grid-auto-columns: min(var(--video-review-card-width), 100%);
+    gap: var(--space-4);
+    margin: 0;
+    padding: 0;
+    overflow-x: auto;
+    list-style: none;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    /* Pasek przewijania jest tu szumem — nawigację niosą strzałki i gest. */
+    scrollbar-width: none;
+    /* Nazwana oś dla flary; `timeline-scope` wyżej wypuszcza ją poza tor. */
+    scroll-timeline: --vreviews-scroll inline;
+  }
+
+  .vreviews__track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .vreviews__item {
+    scroll-snap-align: start;
+  }
+
+  /* ── Kafel ──────────────────────────────────────────────────────────────── */
+
+  .vcard {
+    position: relative;
+    display: grid;
+    margin: 0;
+    padding: var(--video-review-card-padding);
+    border-radius: var(--video-review-card-radius);
+    background-color: var(--video-review-card-bg);
+    /*
+      Proporcja, nie wysokość: kafel jest kolumną karuzeli, więc na wąskim
+      ekranie zwęża się, a kadr ma się zwężać razem z nim.
+    */
+    aspect-ratio: var(--video-review-card-ratio);
+  }
+
+  .vcard__media {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--video-review-media-radius);
+    /* Kadr wypełnia kafel bez wpisanej wysokości — patrz `aspect-ratio` wyżej. */
+    min-height: 0;
+    background-color: var(--color-bg);
+  }
+
+  /*
+    P-011: `<img>` renderuje komponent potomny, więc scoped CSS go nie widzi
+    bez `:global`.
+  */
+  .vcard__media :global(.vcard__poster) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .vcard__play {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    translate: -50% -50%;
+    display: grid;
+    place-items: center;
+    width: var(--video-review-play-size);
+    height: var(--video-review-play-size);
+    border-radius: var(--radius-full);
+    /*
+      Szkło działa naprawdę — pod spodem leży klatka wideo (inaczej niż
+      w HowWeWork, gdzie `backdrop-filter` był no-opem, P-015).
+    */
+    background-color: var(--video-review-glass-bg);
+    backdrop-filter: blur(var(--video-review-glass-blur));
+    color: var(--color-fg);
+    transition: scale var(--duration-fast) var(--ease-standard);
+  }
+
+  .vcard__play-icon {
+    width: var(--video-review-play-icon);
+    height: var(--video-review-play-icon);
+  }
+
+  .vcard:hover .vcard__play,
+  .vcard__play:focus-visible {
+    scale: 1.04;
+  }
+
+  .vcard__name {
+    position: absolute;
+    inset-inline: calc(var(--video-review-card-padding) + var(--video-review-media-padding));
+    inset-block-end: calc(var(--video-review-card-padding) + var(--video-review-media-padding));
+    padding: var(--video-review-name-padding);
+    border-radius: var(--video-review-name-radius);
+    background-color: var(--video-review-glass-bg);
+    backdrop-filter: blur(var(--video-review-glass-blur));
+    color: var(--color-fg);
+    font-size: var(--video-review-name-size);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-tight);
+  }
+
+  /* ── Kreska z flarą i strzałki ──────────────────────────────────────────── */
+
+  .vreviews__footer {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    margin-block-start: var(--space-6);
+  }
+
+  .vreviews__rail {
+    position: relative;
+    flex: 1;
+    height: 1px;
+    overflow: hidden;
+    background-color: var(--color-border-hairline);
+    /* Cień z makiety: kreska ma odbijać się od tła, nie świecić. */
+    filter: drop-shadow(0.5px 0 0 #000);
+    /* Jednostka `cqw` w przesunięciu flary odnosi się do TEJ szerokości. */
+    container-type: inline-size;
+  }
+
+  .vreviews__flare {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    width: var(--video-review-flare-width);
+    max-width: 100%;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      rgb(255 0 85 / 0) 0%,
+      var(--video-review-flare-color) 47.6%,
+      rgb(255 0 85 / 0) 100%
+    );
+  }
+
+  /*
+    Tam, gdzie przeglądarka zna oś przewijania, flara JEST wskaźnikiem pozycji.
+    Gdzie nie zna — stoi przy lewej krawędzi, czyli w stanie z makiety.
+  */
+  @supports (animation-timeline: scroll()) {
+    /*
+     * PUŁAPKA (PLAYBOOK P-050): longhandy, nie skrót `animation`. Skrót razem
+     * z `animation-timeline` minifikator składa w jedną deklarację z osią czasu
+     * w środku, czego Chrome nie przyjmuje — i wyrzuca całą regułę. Widać to
+     * dopiero na buildzie, `astro dev` nie minifikuje CSS.
+     */
+    .vreviews__flare {
+      animation-name: vreviews-flare;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: --vreviews-scroll;
+    }
+  }
+
+  @keyframes vreviews-flare {
+    to {
+      translate: calc(100cqw - var(--video-review-flare-width)) 0;
+    }
+  }
+
+  .vreviews__nav {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .vreviews__nav[hidden] {
+    display: none;
+  }
+
+  .vreviews__arrow {
+    display: grid;
+    place-items: center;
+    width: var(--video-review-arrow-size);
+    height: var(--video-review-arrow-size);
+    border-radius: var(--video-review-arrow-radius);
+    background-color: var(--video-review-arrow-bg);
+    color: var(--video-review-arrow-fg);
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-standard);
+  }
+
+  .vreviews__arrow:hover:not(:disabled) {
+    background-color: var(--video-review-arrow-bg-hover);
+  }
+
+  .vreviews__arrow:disabled {
+    color: var(--video-review-arrow-fg-disabled);
+    cursor: default;
+  }
+
+  .vreviews__arrow-icon {
+    width: 8px;
+    height: 14px;
+  }
+
+  /* Wstecz to ta sama strzałka odbita — nie drugi rysunek. */
+  .vreviews__arrow[data-step='-1'] .vreviews__arrow-icon {
+    scale: -1 1;
+  }
+
+  /* ── Lightbox ───────────────────────────────────────────────────────────── */
+
+  .vlightbox {
+    /* <dialog> ma własne domyślne tło, obrys i margines — panel maluje się sam. */
+    margin: auto;
+    max-width: 100vw;
+    max-height: 100dvh;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    overflow: visible;
+  }
+
+  .vlightbox::backdrop {
+    background-color: rgb(13 15 13 / 0.85);
+    backdrop-filter: blur(var(--video-review-glass-blur));
+  }
+
+  .vlightbox__panel {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: var(--space-4);
+  }
+
+  /*
+    `contain`, nie `cover` jak w kafelku: tu nie ma proporcji do wypełnienia,
+    jest nagranie do pokazania w całości. Wysokość prowadzi (nagrania są
+    pionowe), szerokość wychodzi z proporcji, a `dvh` zamiast `vh` bierze
+    pod uwagę pasek adresu na telefonie.
+  */
+  .vlightbox__video {
+    /*
+      Szerokość prowadzi, wysokość wychodzi z proporcji — i to szerokość jest
+      policzona z OBU ograniczeń naraz. Para `height` + `max-width` byłaby
+      konfliktem: przeglądarka przycinałaby kadr do szerokości i dokładała
+      czarne pasy, zamiast po prostu zmniejszyć nagranie.
+      `dvh`, nie `vh`: na telefonie pasek adresu zjada różnicę.
+    */
+    width: min(92vw, calc((100dvh - 11rem) * 9 / 16));
+    height: auto;
+    aspect-ratio: 9 / 16;
+    object-fit: contain;
+    border-radius: var(--video-review-media-radius);
+    background-color: #000;
+  }
+
+  /*
+    Pełny ekran zostaje włączony (natywne `controls` mają go dać), ale kadr
+    musi się w nim zachować jak kadr: bez tej reguły `object-fit` i wymiary
+    z panelu jadą dalej i nagranie ląduje przycięte na środku ekranu.
+  */
+  .vlightbox__video:fullscreen {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    aspect-ratio: auto;
+    border-radius: 0;
+  }
+
+  /*
+    Przycisk stoi W UKŁADZIE, nie na `position: absolute` nad kadrem: panel jest
+    wyśrodkowany w oknie, a element wyjęty z układu nie liczy się do jego
+    wysokości — przy wysokim nagraniu krzyżyk wyjeżdżał wtedy poza ekran.
+  */
+  .vlightbox__close {
+    justify-self: end;
+    display: grid;
+    place-items: center;
+    width: var(--video-review-play-size);
+    height: var(--video-review-play-size);
+    border-radius: var(--radius-full);
+    background-color: var(--video-review-glass-bg);
+    backdrop-filter: blur(var(--video-review-glass-blur));
+    color: var(--color-fg);
+    cursor: pointer;
+  }
+
+  .vlightbox__close svg {
+    width: var(--video-review-play-icon);
+    height: var(--video-review-play-icon);
+  }
+
+  .vlightbox__name {
+    margin: 0;
+    color: var(--color-fg);
+    font-size: var(--video-review-name-size);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-tight);
+  }
+
+  /* ── Breakpointy ────────────────────────────────────────────────────────── */
+
+  @media (max-width: 47.99rem) {
+    .vlightbox__video {
+      width: min(92vw, calc((100dvh - 5rem) * 9 / 16));
+    }
+
+    /*
+      Nad kadrem nie ma miejsca na przycisk, więc wchodzi do środka — i to
+      w LEWY róg: w prawym górnym WebKit trzyma własny suwak głośności
+      i dwa przyciski zachodziłyby na siebie.
+    */
+    .vlightbox__close {
+      position: absolute;
+      inset-block-start: var(--space-2);
+      inset-inline-start: var(--space-2);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .vreviews__track {
+      /* Dwa kafle w oknie. */
+      grid-auto-columns: calc((100% - var(--space-4)) / 2);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .vreviews__track {
+      /* Trzy kafle w oknie — układ z makiety. */
+      grid-auto-columns: calc((100% - 2 * var(--space-4)) / 3);
+    }
+
+    .vreviews__heading {
+      font-size: var(--text-4xl);
+    }
+  }
+
+  /*
+    Globalna reguła z global.css skraca CZASY animacji, ale `scroll-behavior`
+    nie jest animacją — trzeba je wyłączyć wprost, inaczej klik w strzałkę
+    nadal przesuwa kadr płynnie.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .vreviews__track {
+      scroll-behavior: auto;
+    }
+  }
+</style>

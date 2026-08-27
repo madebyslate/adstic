@@ -1,0 +1,42 @@
+node_modules/
+.pnpm-store/
+.cache/
+
+# build output
+dist/
+.astro/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# env
+.env
+.env.*
+!.env.example
+
+# media / uploads (produkcja trzyma je w docker volume)
+apps/cms/media/
+
+# apps/web/public/video/ NIE jest ignorowany, choć był.
+# To nie są uploady — to WEJŚCIE BUILDA: `astro build` kopiuje public/ do dist/,
+# a nginx serwuje /video/ ze statyku, nie z volume'u. Plik spoza repozytorium
+# istnieje wtedy wyłącznie na dysku osoby, która go zakodowała: `pnpm build`
+# lokalnie przechodzi, `docker build` z czystego klona wypuszcza stronę
+# z martwymi <source> (PLAYBOOK P-048).
+# Wchodzą tu WYŁĄCZNIE wyniki `scripts/encode-video.sh` i tylko w budżecie
+# z tego skryptu (tło ≤ 2 MB, opinia ≤ 3 MB). Surowe źródła zostają w _inbox/.
+
+# testy
+test-results/
+playwright-report/
+blob-report/
+.lighthouseci/
+
+# lokalne
+.DS_Store
+**/.DS_Store
+*.local
+
+# skrzynka na materiały źródłowe (patrz _inbox/README.md)
+_inbox/*
+!_inbox/README.md

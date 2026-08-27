@@ -1,0 +1,33 @@
+{
+  "name": "adstic",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Adstic \u2014 monorepo: apps/web (Astro static) + apps/cms (Payload CMS) + packages/shared (kontrakt danych zod) + packages/tokens.",
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": "11.22.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev --filter=@repo/web",
+    "dev:cms": "turbo run dev --filter=@repo/cms",
+    "build": "turbo run build",
+    "build:web": "turbo run build --filter=@repo/web",
+    "build:cms": "turbo run build --filter=@repo/cms",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test:visual": "pnpm --filter @repo/web test:visual",
+    "test:visual:update": "pnpm --filter @repo/web test:visual:update",
+    "lighthouse": "lhci autorun",
+    "generate:types": "pnpm --filter @repo/cms generate:types",
+    "generate:importmap": "pnpm --filter @repo/cms generate:importmap",
+    "payload": "pnpm --filter @repo/cms payload",
+    "seed": "pnpm --filter @repo/cms seed",
+    "verify": "pnpm typecheck && pnpm lint && pnpm build"
+  },
+  "devDependencies": {
+    "@lhci/cli": "0.15.1",
+    "turbo": "2.10.11",
+    "typescript": "5.9.3"
+  }
+}

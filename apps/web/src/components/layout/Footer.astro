@@ -1,0 +1,232 @@
+---
+import Logo from '@/assets/adstic-logo.svg?raw'
+import LinkedInIcon from '@/assets/social/linkedin.svg?raw'
+import FacebookIcon from '@/assets/social/facebook.svg?raw'
+import XIcon from '@/assets/social/x.svg?raw'
+import InstagramIcon from '@/assets/social/instagram.svg?raw'
+import { mainNavigation } from '@/lib/navigation'
+import { footerTagline, legalNavigation, socialNavigation } from '@/lib/footer'
+
+/**
+ * Stopka strony.
+ *
+ * Menu jest tą samą listą co w nagłówku — łamaną na kolumny PO DWIE POZYCJE,
+ * a nie przepisaną ręcznie na cztery listy. Kolumna jest więc funkcją
+ * kolejności w danych (ta sama zasada co przy kaflach `WhoWeAre`): dołożenie
+ * pozycji w `navigation.ts` dokłada ją w stopce, zamiast po cichu rozjeżdżać
+ * oba menu. Ostatnia kolumna to linki prawne — osobna lista, bo to nie jest
+ * nawigacja produktowa.
+ *
+ * Ikony są wklejone inline (`?raw`), jak logo w nagłówku: cztery kontury po
+ * ~0,4 KB to mniej niż cztery requesty, a `currentColor` pozwala im dziedziczyć
+ * token tekstu zamiast nieść własną biel (AGENT-RULES §4).
+ */
+
+const ITEMS_PER_COLUMN = 2
+
+const menuColumns: (typeof mainNavigation)[] = []
+for (let i = 0; i < mainNavigation.length; i += ITEMS_PER_COLUMN) {
+  menuColumns.push(mainNavigation.slice(i, i + ITEMS_PER_COLUMN))
+}
+menuColumns.push(legalNavigation)
+
+const icons: Record<(typeof socialNavigation)[number]['icon'], string> = {
+  linkedin: LinkedInIcon,
+  facebook: FacebookIcon,
+  x: XIcon,
+  instagram: InstagramIcon,
+}
+
+/* Rok jest liczony przy buildzie — strona jest statyczna, więc to data wydania. */
+const year = new Date().getFullYear()
+---
+
+<footer class="footer">
+  <div class="container-page footer__inner">
+    <div class="footer__brand">
+      <a class="footer__logo" href="/" aria-label="Adstic — strona główna">
+        <Fragment set:html={Logo} />
+      </a>
+      <p class="footer__tagline">{footerTagline}</p>
+    </div>
+
+    <nav class="footer__nav" aria-label="Nawigacja w stopce">
+      {
+        menuColumns.map((column) => (
+          <ul class="footer__column">
+            {column.map((item) => (
+              <li>
+                <a class="footer__link" href={item.href} aria-label={item.ariaLabel}>
+                  {item.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        ))
+      }
+    </nav>
+
+    <ul class="footer__social" aria-label="Adstic w mediach społecznościowych">
+      {
+        socialNavigation.map((item) => (
+          <li>
+            <a
+              class="footer__social-link"
+              href={item.href}
+              aria-label={item.ariaLabel ?? item.label}
+              {...item.external ? { target: '_blank', rel: 'noopener' } : {}}
+            >
+              <Fragment set:html={icons[item.icon]} />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <p class="footer__legal">
+      <span aria-hidden="true">&copy;</span> {year}{' '}
+      <span class="footer__legal-brand">Adstic.</span> All rights reserved.
+    </p>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    background-color: var(--color-bg);
+    /*
+     * Górny odstęp jest większy od dolnego — stopka ma odetchnąć od ostatniej
+     * sekcji, a nie od krawędzi okna. Wartości odtworzone ze złożenia.
+     */
+    padding-block: var(--space-8) var(--space-7);
+  }
+
+  .footer__inner {
+    display: grid;
+    /*
+     * Dwie równe kolumny, nie „kolumna tekstu + reszta": menu ma zaczynać się
+     * w połowie szerokości STRONY, a nie tam, gdzie skończy się zdanie o firmie
+     * — inaczej przesuwałoby się przy każdej zmianie długości tego zdania.
+     * (Ta sama zasada co przy siatce nagłówka.)
+     */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--footer-row-gap) var(--space-6);
+    align-items: start;
+  }
+
+  .footer__brand {
+    display: flex;
+    flex-direction: column;
+    gap: var(--footer-brand-gap);
+  }
+
+  .footer__logo {
+    display: inline-flex;
+    align-self: start;
+    color: var(--color-fg);
+  }
+
+  .footer__logo :global(svg) {
+    display: block;
+    height: var(--footer-logo-height);
+    width: auto;
+  }
+
+  .footer__tagline {
+    max-width: var(--footer-intro-width);
+    margin: 0;
+    color: var(--color-fg-faint);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--leading-normal);
+  }
+
+  .footer__nav {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-5) var(--space-4);
+  }
+
+  .footer__column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .footer__link {
+    color: var(--color-fg-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-normal);
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+
+  .footer__link:hover {
+    color: var(--color-fg);
+  }
+
+  .footer__social {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    align-self: end;
+  }
+
+  .footer__social-link {
+    display: inline-flex;
+    color: var(--color-fg);
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+
+  .footer__social-link:hover {
+    opacity: 0.7;
+  }
+
+  .footer__social-link :global(svg) {
+    display: block;
+  }
+
+  .footer__legal {
+    margin: 0;
+    justify-self: end;
+    align-self: end;
+    color: var(--color-fg-muted);
+    font-size: var(--footer-legal-size);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--leading-normal);
+  }
+
+  .footer__legal-brand {
+    color: var(--color-fg);
+    font-size: var(--text-sm);
+    /*
+     * W makiecie ten wyraz ma wagę 600. Wysyłamy wyłącznie 400 i 500 (patrz
+     * DECISIONS.md — `bold` celowo wskazuje na 500), więc 600 dałoby albo
+     * syntetyczne pogrubienie przeglądarki, albo trzeci plik fontu. Wchodzi 500.
+     */
+    font-weight: var(--font-weight-medium);
+  }
+
+  /* Poniżej 768 px stopka jest jedną kolumną: menu łamie się na dwie kolumny,
+     a nota prawna wraca pod linki społecznościowe, do lewej krawędzi. */
+  @media (max-width: 767px) {
+    .footer__inner {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-7);
+    }
+
+    .footer__nav {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .footer__legal {
+      justify-self: start;
+    }
+  }
+</style>

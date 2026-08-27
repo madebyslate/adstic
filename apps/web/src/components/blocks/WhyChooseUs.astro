@@ -1,0 +1,277 @@
+---
+import type { WhyChooseUsBlock } from '@repo/shared'
+import { resolveVector } from '@/lib/media'
+
+interface Props {
+  block: WhyChooseUsBlock
+}
+
+const { block } = Astro.props
+const headingId = 'why-choose-heading'
+---
+
+{/*
+  Wejście sekcji. Grupa trzyma wszystkie animacje w środku na pierwszej klatce,
+  dopóki obserwator w BaseLayout nie uzna, że warto ją odegrać — mechanizm jest
+  opisany przy „W polu widzenia" w global.css.
+*/}
+<section class="why" aria-labelledby={headingId} data-reveal-group>
+  <div class="container-page">
+    {/*
+      Pięć kresek bloku (górna, dolna, pionowa na środku i trzy między
+      argumentami) to obrysy TYCH pudełek, których krawędzie opisują — nie
+      osobne elementy. Dzięki temu stykają się z definicji: poziome kreski
+      zaczynają się dokładnie tam, gdzie stoi pionowa, bo rysuje je ta sama
+      kolumna. Szczegóły w spec → „Siatka i kreski".
+    */}
+    <div class="why__grid">
+      <div class="why__intro">
+        {/* Etykieta jest podpisem, nagłówkiem sekcji jest zdanie pod nią. */}
+        <p class="why__eyebrow reveal" style="--reveal-index: 0">{block.eyebrow}</p>
+
+        <h2 id={headingId} class="why__heading reveal" style="--reveal-index: 1">{block.heading}</h2>
+        <p class="why__description reveal" style="--reveal-index: 2">{block.description}</p>
+
+        {/*
+          Przycisk jest DOSUNIĘTY DO DOŁU kolumny (`margin-block-start: auto`),
+          a nie odsunięty od akapitu stałą wartością: wysokość lewej kolumny
+          narzuca prawa, więc każda inna wartość rozjeżdżałaby się przy zmianie
+          liczby argumentów albo długości ich opisów.
+        */}
+        <p class="why__actions reveal" style="--reveal-index: 3">
+          {/* Ten sam dwuwarstwowy przycisk co w hero i CTA. */}
+          <a
+            class="why__button"
+            href={block.cta.href}
+            aria-label={block.cta.ariaLabel}
+            rel={block.cta.external ? 'noopener noreferrer' : undefined}
+            target={block.cta.external ? '_blank' : undefined}
+          >
+            <span class="why__button-face btn-wipe">{block.cta.label}</span>
+          </a>
+        </p>
+      </div>
+
+      <ul class="why__list">
+        {
+          block.items.map((item, index) => (
+            <li class="why-item reveal" style={`--reveal-index: ${index + 2}`}>
+              {/*
+                Ikona idzie plikiem, nie inline: cztery rysunki to ~49 KB SVG
+                (sam `contact.svg` ma 25 filtrów rozmycia), a blok leży głęboko
+                pod foldem — jako `lazy` nie kosztuje ani requestu przy starcie,
+                ani kilobajta dokumentu na każdym wejściu.
+
+                Szerokość ustala CSS (32 px dla każdej), wysokość zostaje `auto`,
+                bo rysunki mają różną liczbę kropek w pionie. `width`/`height`
+                w atrybutach niosą naturalne wymiary pliku — z nich przeglądarka
+                zna proporcję i rezerwuje właściwą wysokość.
+              */}
+              <img
+                class="why-item__icon"
+                src={resolveVector(item.icon)}
+                alt=""
+                width={item.icon.width}
+                height={item.icon.height}
+                loading="lazy"
+                decoding="async"
+                aria-hidden="true"
+                draggable={false}
+              />
+
+              <h3 class="why-item__title">{item.title}</h3>
+              <p class="why-item__description">{item.description}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  .why {
+    padding-block: var(--section-padding-y);
+    /* Tło jest tłem strony — sekcja go nie maluje. */
+  }
+
+  /*
+    Górna i dolna kreska tabeli. Obie na siatce, więc mają dokładnie szerokość
+    kolumny treści — a pionowa i poziome, rysowane przez jej dzieci, kończą się
+    na tych samych liniach.
+  */
+  .why__grid {
+    display: grid;
+    border-block: 1px solid var(--color-border-hairline);
+  }
+
+  /* ── Lewa kolumna ───────────────────────────────────────────────────────── */
+
+  .why__intro {
+    display: flex;
+    flex-direction: column;
+    padding-block: var(--why-padding-y);
+  }
+
+  .why__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-5);
+    color: var(--color-fg);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-wide);
+    line-height: var(--leading-tight);
+    text-transform: uppercase;
+  }
+
+  .why__eyebrow::before {
+    content: '';
+    width: var(--space-1);
+    height: var(--space-1);
+    background-color: var(--color-brand);
+  }
+
+  .why__heading {
+    margin: 0 0 var(--space-5);
+    color: var(--color-fg);
+    /* 48 px dotyczy desktopu — na 390 px zostawiałoby dwa słowa w wierszu. */
+    font-family: var(--font-heading);
+    font-size: var(--text-3xl);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--leading-display);
+  }
+
+  .why__description {
+    max-width: var(--why-intro-width);
+    margin: 0;
+    color: var(--color-fg-muted);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--leading-relaxed);
+  }
+
+  .why__actions {
+    margin: var(--space-7) 0 0;
+  }
+
+  .why__button {
+    display: inline-block;
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    background-color: var(--color-overlay);
+    text-decoration: none;
+  }
+
+  .why__button-face {
+    display: block;
+    padding: var(--control-padding-y) var(--control-padding-x);
+    border-radius: var(--radius-full);
+    background-color: var(--color-accent);
+    box-shadow: var(--shadow-button);
+    color: var(--color-accent-fg);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-tight);
+    white-space: nowrap;
+  }
+
+  /* ── Prawa kolumna ──────────────────────────────────────────────────────── */
+
+  /*
+    Lista, nie układ: to są cztery argumenty, a nie cztery pozycje siatki.
+    Kreska nad każdą pozycją oprócz pierwszej — pierwszą zamyka górna kreska
+    całej tabeli, więc druga w tym samym miejscu dałaby 2 px.
+  */
+  .why__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    /* Poniżej 768 px kolumny stoją jedna pod drugą — podział zostaje, tylko
+       obraca się o 90°. Pionową kreskę włącza media query niżej. */
+    border-block-start: 1px solid var(--color-border-hairline);
+  }
+
+  .why-item {
+    /*
+      Ikona w pierwszej kolumnie, tytuł obok NA JEJ WYSOKOŚCI, opis pod tytułem.
+      Wiersz pierwszy jest wyrównany do środka, więc tytuł stoi w połowie ikony
+      niezależnie od tego, ile kropek ma rysunek.
+    */
+    display: grid;
+    grid-template-columns: var(--why-icon-size) minmax(0, 1fr);
+    column-gap: var(--space-5);
+    align-items: center;
+    padding-block: var(--why-padding-y);
+  }
+
+  .why-item + .why-item {
+    border-block-start: 1px solid var(--color-border-hairline);
+  }
+
+  .why-item__icon {
+    width: var(--why-icon-size);
+    /* Rysunki mają różną liczbę kropek w pionie — wysokość wynika z pliku. */
+    height: auto;
+  }
+
+  .why-item__title {
+    margin: 0;
+    color: var(--color-fg);
+    font-family: var(--font-heading);
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-normal);
+  }
+
+  .why-item__description {
+    grid-column: 2;
+    max-width: var(--why-item-text-width);
+    /* 12 px podane wprost — odstęp tytuł → opis wewnątrz argumentu. */
+    margin: var(--space-3) 0 0;
+    color: var(--color-fg-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--leading-relaxed);
+  }
+
+  @media (min-width: 768px) {
+    .why__grid {
+      grid-template-columns: var(--why-columns);
+    }
+
+    .why__heading {
+      font-size: var(--text-4xl);
+    }
+
+    .why__intro {
+      padding-inline-end: var(--space-6);
+    }
+
+    /*
+      Tu podział wraca do pionu: kreska jest lewą krawędzią TEJ kolumny, więc
+      poziome kreski jej dzieci stykają się z nią bez jednej wartości powtórzonej
+      w drugim miejscu.
+    */
+    .why__list {
+      border-block-start: none;
+      border-inline-start: 1px solid var(--color-border-hairline);
+    }
+
+    .why-item {
+      padding-inline-start: var(--space-6);
+    }
+
+    /* Dopiero w dwóch kolumnach jest co dosuwać: nadwyżkę wysokości, którą
+       lewej kolumnie narzuca lista argumentów. */
+    .why__actions {
+      margin-block-start: auto;
+      /* Zapas, gdy lewa kolumna JEST wyższa (długi nagłówek, wąski ekran). */
+      padding-block-start: var(--space-7);
+    }
+  }
+</style>

@@ -1,0 +1,302 @@
+---
+import type { CtaBlock } from '@repo/shared'
+import Picture from '@/components/ui/Picture.astro'
+
+interface Props {
+  block: CtaBlock
+}
+
+const { block } = Astro.props
+const headingId = 'cta-heading'
+---
+
+{/*
+  Wejście sekcji. Grupa trzyma wszystkie animacje w środku na pierwszej klatce,
+  dopóki obserwator w BaseLayout nie uzna, że warto ją odegrać — mechanizm jest
+  opisany przy „W polu widzenia" w global.css.
+*/}
+<section class="cta" aria-labelledby={headingId} data-reveal-group>
+  <div class="container-page">
+    {/*
+      Scena, nie sama płyta: łuna leży POD płytą i wystaje spod jej dolnej
+      krawędzi, więc nie może być dzieckiem kadru, który jest przycięty
+      promieniem. `isolation` w CSS domyka grupę — patrz komentarz przy `.cta__stage`.
+    */}
+    <div class="cta__stage">
+      <div class="cta__glow reveal-fade" style="--reveal-index: 0" aria-hidden="true"></div>
+
+      <div class="cta__panel">
+        {/* Kadr z łuną. Dekoracja — `alt` pusty, poza drzewem dostępności. */}
+        <div class="cta__media reveal-fade" style="--reveal-index: 0" aria-hidden="true">
+          <Picture
+            image={block.background}
+            widths={[768, 1240, 2480]}
+            sizes="(min-width: 1280px) 1240px, 100vw"
+          />
+        </div>
+
+        <div class="cta__frame">
+          <p class="cta__eyebrow reveal" style="--reveal-index: 1">{block.eyebrow}</p>
+
+          {/* Etykieta wyżej jest podpisem, nagłówkiem sekcji jest to zdanie. */}
+          <h2 id={headingId} class="cta__heading reveal" style="--reveal-index: 2">{block.heading}</h2>
+
+          <p class="cta__actions reveal" style="--reveal-index: 3">
+            {/*
+              Ten sam dwuwarstwowy przycisk co w hero: zewnętrzna „szyba"
+              (obrys + ciemne tło) i wewnętrzna jasna pigułka w jednym <a>.
+            */}
+            <a
+              class="cta__button"
+              href={block.cta.href}
+              aria-label={block.cta.ariaLabel}
+              rel={block.cta.external ? 'noopener noreferrer' : undefined}
+              target={block.cta.external ? '_blank' : undefined}
+            >
+              <span class="cta__button-face btn-wipe">{block.cta.label}</span>
+            </a>
+          </p>
+
+          {/*
+            Pytanie nad plakietkami jest podpisem listy, nie nagłówkiem
+            dokumentu — `<p>` z `id`, do którego lista się odwołuje.
+          */}
+          <p class="cta__benefits-heading reveal" style="--reveal-index: 4" id="cta-benefits-heading">{block.benefitsHeading}</p>
+
+          <ul class="cta__benefits" aria-labelledby="cta-benefits-heading">
+            {
+              block.benefits.map((benefit, index) => (
+                <li class="benefit reveal" style={`--reveal-index: ${index + 5}`}>
+                  {/*
+                    Ptaszek jest ozdobnikiem: „spełnione" niesie sama obecność
+                    pozycji na liście, więc ikona zostaje poza a11y.
+                  */}
+                  <svg
+                    class="benefit__icon"
+                    viewBox="0 0 13 9"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M11.4167 0.75L4.08333 8.08333L0.75 4.75"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                  {benefit}
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .cta {
+    background-color: var(--color-bg);
+    padding-block: var(--section-padding-y);
+  }
+
+  /*
+    Sekcja maluje własne tło, a `isolation` domyka grupę kompozycji: ujemny
+    `z-index` łuny leży nad tym tłem tylko wewnątrz tej grupy. Bez izolacji
+    łuna wypada do stackingu strony, czyli POD tło malowane przez sekcję
+    (ta sama pułapka co w OurImpact, PLAYBOOK P-037).
+  */
+  .cta__stage {
+    position: relative;
+    isolation: isolate;
+  }
+
+  /*
+    Łuna pod płytą. Jednolita plama rozmyta filtrem, nie eksport JPG — nie ma
+    więc kadru, którego krawędź trzeba by maskować, i nie kosztuje requestu.
+    Szerokość jest ograniczona do sceny, żeby na wąskich ekranach plama nie
+    wypychała strony w poziom.
+  */
+  .cta__glow {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: 50%;
+    z-index: -1;
+    width: min(100%, var(--cta-glow-width));
+    height: var(--cta-glow-height);
+    translate: -50% var(--cta-glow-shift);
+    background-color: var(--cta-glow-color);
+    filter: blur(var(--cta-glow-blur));
+    pointer-events: none;
+  }
+
+  .cta__panel {
+    position: relative;
+    /* Kadr w tle jest prostokątem — bez tego wystaje poza promień płyty. */
+    overflow: hidden;
+    padding: var(--cta-panel-padding);
+    border-radius: var(--cta-panel-radius);
+    /* Tło POD kadrem: gdy obraz jeszcze się nie doniósł, płyta jest płytą. */
+    background-color: var(--color-bg-subtle);
+    box-shadow: var(--shadow-cta-panel);
+  }
+
+  /*
+    Czerwone światło pod górną krawędzią. Jest nakładką, a nie cieniem `inset`
+    na samej płycie, bo `inset` maluje się POD dziećmi elementu — czyli pod
+    kadrem z łuną. Nakładka leży nad kadrem i pod treścią.
+  */
+  .cta__panel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+    box-shadow: var(--shadow-cta-panel-inner);
+    pointer-events: none;
+  }
+
+  .cta__media {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  /* PUŁAPKA (PLAYBOOK P-011): `<img>` z Picture.astro nie ma `data-astro-cid-*`
+     tego bloku — selektor musi iść przez rodzica i `:global()`. */
+  .cta__media :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /*
+      Kadr jest szerszy niż wysoki, więc na szerokim ekranie przycina się
+      w pionie i ta wartość nic nie robi. Zaczyna działać poniżej ~700 px,
+      gdzie płyta jest wyższa niż szersza: trzymamy wtedy LEWĄ krawędź, bo
+      tam kadr jest najciemniejszy, a tekst na płycie stoi do lewej.
+    */
+    object-position: 0% 50%;
+  }
+
+  /*
+    Obrys 12 px od krawędzi płyty. Leży NAD nakładką ze światłem, bo niesie
+    treść — stąd `z-index: 2`, a nie kolejność w kodzie.
+  */
+  .cta__frame {
+    position: relative;
+    z-index: 2;
+    padding: var(--cta-frame-padding-narrow);
+    border: 1px solid var(--cta-frame-border);
+    border-radius: var(--cta-frame-radius);
+  }
+
+  .cta__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-5);
+    color: var(--color-fg);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-wide);
+    line-height: var(--leading-tight);
+    text-transform: uppercase;
+  }
+
+  .cta__eyebrow::before {
+    content: '';
+    width: var(--space-1);
+    height: var(--space-1);
+    background-color: var(--color-brand);
+  }
+
+  .cta__heading {
+    max-width: var(--cta-heading-width);
+    margin: 0;
+    color: var(--color-fg);
+    /* 48 px dotyczy desktopu — na 390 px zostawiałoby dwa słowa w wierszu. */
+    font-size: var(--text-3xl);
+    font-family: var(--font-heading);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--leading-snug);
+    text-wrap: balance;
+  }
+
+  .cta__actions {
+    margin: var(--space-6) 0 0;
+  }
+
+  .cta__button {
+    display: inline-block;
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    background-color: var(--color-overlay);
+    text-decoration: none;
+  }
+
+  .cta__button-face {
+    display: block;
+    padding: var(--control-padding-y) var(--control-padding-x);
+    border-radius: var(--radius-full);
+    background-color: var(--color-accent);
+    box-shadow: var(--shadow-button);
+    color: var(--color-accent-fg);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-tight);
+    white-space: nowrap;
+  }
+
+  .cta__benefits-heading {
+    margin: var(--cta-benefits-offset) 0 var(--space-4);
+    color: var(--color-fg-on-panel);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--leading-normal);
+  }
+
+  /* `<ul>`, nie ciąg `<span>`: to lista tego, co się zmienia — kolejność jest
+     układem, ale sama wyliczanka jest treścią. */
+  .cta__benefits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .benefit {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--cta-badge-gap);
+    padding: var(--cta-badge-padding);
+    border-radius: var(--cta-badge-radius);
+    background-color: var(--cta-badge-bg);
+    color: var(--color-fg-on-panel);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--leading-normal);
+  }
+
+  .benefit__icon {
+    flex: none;
+    width: var(--cta-badge-icon-width);
+    height: var(--cta-badge-icon-height);
+  }
+
+  @media (min-width: 768px) {
+    .cta__frame {
+      padding: var(--cta-frame-padding);
+    }
+
+    .cta__heading {
+      font-size: var(--text-4xl);
+    }
+  }
+</style>

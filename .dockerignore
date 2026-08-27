@@ -1,0 +1,21 @@
+.git
+.github
+.env
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/.next
+**/dist
+**/.astro
+**/.turbo
+**/test-results
+**/playwright-report
+**/.lighthouseci
+.cache
+apps/cms/media
+.DS_Store
+**/.DS_Store
+
+# skrzynka na surowe materiały od klienta — nigdy nie jest częścią obrazu
+_inbox

@@ -1,0 +1,60 @@
+/*
+ * Inter Display — jedyna rodzina w projekcie.
+ *
+ * Licencja: SIL Open Font License 1.1 (rsms/inter v4.1). Kopia licencji leży
+ * obok plików: public/fonts/inter-LICENSE.txt — OFL wymaga jej dystrybucji.
+ *
+ * Pliki są subsetem (latin + latin-ext, żeby polskie znaki działały) zrobionym
+ * `fontTools.subset --flavor=woff2 --with-zopfli`. Pełny `InterDisplay-*.woff2`
+ * z paczki dystrybucyjnej waży ~113 KB na wagę; po subsetcie ~40 KB.
+ * Surowe źródła zostają w `_inbox/fonty/`, żeby dało się subset powtórzyć.
+ *
+ * UWAGA (PLAYBOOK P-014): Nginx serwuje /fonts/ z `immutable`, a te pliki nie
+ * mają hasza w nazwie. Zmiana zakresu subsetu albo wagi = ZMIANA NAZWY PLIKU,
+ * inaczej wracający użytkownik zostaje ze starą wersją.
+ *
+ * Wagi: 400 (opis, treść) i 500 (nagłówki, nawigacja, przyciski). Nic więcej
+ * nie jest używane, a `--font-weight-bold` celowo wskazuje na 500 — dzięki temu
+ * żadne miejsce nie wymusi syntetycznego pogrubienia z brakującego pliku.
+ */
+
+@font-face {
+  font-family: 'Inter Display';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/inter-display-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter Display';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/inter-display-500.woff2') format('woff2');
+}
+
+/*
+ * Font zastępczy z dopasowanymi metrykami.
+ *
+ * `font-display: swap` oznacza, że pierwsza klatka jest rysowana fontem
+ * systemowym. Bez korekty metryk podmiana przesuwa tekst i wchodzi do CLS —
+ * a hero to element LCP, więc płaci za to najdrożej.
+ *
+ * Wartości policzone z metryk Inter Display 400 i Arial (Arial i Helvetica mają
+ * praktycznie identyczne szerokości, więc jedna deklaracja obsługuje macOS
+ * i Windows):
+ *   size-adjust      = avgWidth(Inter) / avgWidth(Arial) = 0.5648 / 0.5777
+ *   ascent-override  = hhea.ascent(Inter)  / size-adjust
+ *   descent-override = hhea.descent(Inter) / size-adjust
+ * `line-gap-override: 0%` bierze się stąd, że Inter ma zerowy lineGap, a Arial
+ * ma 15% — bez nadpisania fallback byłby wyraźnie wyższy w interlinii.
+ */
+@font-face {
+  font-family: 'Inter Display Fallback';
+  src: local('Arial'), local('Helvetica'), local('Liberation Sans');
+  size-adjust: 97.77%;
+  ascent-override: 99.09%;
+  descent-override: 24.67%;
+  line-gap-override: 0%;
+}

@@ -1,0 +1,598 @@
+---
+import type { HeroBlock } from '@repo/shared'
+import Picture from '@/components/ui/Picture.astro'
+import Orbit from '@/assets/hero-logos-orbit.svg?raw'
+
+interface Props {
+  block: HeroBlock
+}
+
+const { block } = Astro.props
+const headingId = 'hero-heading'
+
+const video = block.backgroundVideo
+const trust = block.trust
+const logos = trust?.logos ?? []
+const rating = trust?.rating
+
+/**
+ * Pasek zaufania stoi na stałej WYSOKOŚCI (24 px), a szerokość każdego wpisu
+ * wynika z jego proporcji — bo jednym wpisem bywa gotowa grupa logotypów
+ * (`hero-logos.png`, 136 × 33), a nie pojedyncza tarcza. Szerokość renderowaną
+ * liczymy tutaj, żeby `sizes` i `widths` opisywały realny layout; `sizes: 36px`
+ * przy 99-pikselowym pasku każe przeglądarce pobrać za mały wariant.
+ */
+const LOGO_HEIGHT = 24
+const logoWidth = (logo: (typeof logos)[number]) =>
+  Math.round((LOGO_HEIGHT * logo.width) / logo.height)
+---
+
+<section class="hero" aria-labelledby={headingId}>
+  {/*
+    Tło. Obraz jest elementem LCP i ładuje się z `fetchpriority="high"`; osobny
+    <link rel="preload"> dokłada strona (lib/preload.ts). Wideo, jeśli w ogóle
+    jest w danych, dokłada się NAD obrazem i bez `autoplay` w HTML — włącza je
+    skrypt na dole, tylko gdy użytkownik nie prosił o ograniczenie ruchu.
+    Bez JS (i bez wideo) zostaje obraz, czyli hero wygląda poprawnie.
+  */}
+  <div class="hero__backdrop reveal-fade" aria-hidden="true">
+    <Picture
+      image={block.background}
+      widths={[768, 1280, 1920]}
+      sizes="100vw"
+      priority
+    />
+
+    {
+      video && (
+        <video
+          class="hero__video"
+          muted
+          loop
+          playsinline
+          preload="none"
+          tabindex="-1"
+          data-hero-video
+        >
+          {video.map((source) => (
+            <source src={source.src} type={source.type} media={source.media} />
+          ))}
+        </video>
+      )
+    }
+
+    {/*
+      Przejście z pasa nagłówka w kadr. Osobna warstwa, nie `background` na
+      `.hero__backdrop` — tło kontenera leży POD obrazem, a gradient ma go
+      przykryć. Wewnątrz backdropu, więc obejmuje też wideo.
+    */}
+    <div class="hero__scrim"></div>
+  </div>
+
+  {/*
+    Orbita z logotypami platform reklamowych. Czysta dekoracja — komunikat
+    „obsługujemy Google Ads / Meta / GA4 / GTM / Hotjar" niesie treść bloku,
+    nie ten rysunek, więc jest poza drzewem dostępności.
+  */}
+  <div class="hero__orbit" aria-hidden="true">
+    {/*
+      Dwie warstwy na jeden rysunek, bo dwie różne animacje sięgają po tę samą
+      własność `animation`: zewnętrzna jedzie parallaxą sterowaną scrollem,
+      wewnętrzna robi wejście. Jedna z nich w skrócie `animation` skasowałaby
+      nazwę drugiej — dlatego osobne elementy, a nie osobne klasy.
+    */}
+    <div class="hero__orbit-in reveal-fade" style="--reveal-index: 5">
+      <Fragment set:html={Orbit} />
+    </div>
+  </div>
+
+  <div class="container-page hero__content">
+    {/*
+      Kolejność wejścia siedzi w markupie, nie w timelinie: `--reveal-index` to
+      numer kroku, a długość kroku (`--reveal-step`) jest jedna na całą stronę.
+      Nagłówek startuje razem z tłem (indeks 0), reszta dokłada się po kolei.
+    */}
+    <h1 id={headingId} class="hero__heading reveal" style="--reveal-index: 1">{block.heading}</h1>
+
+    {
+      block.subheading && (
+        <p class="hero__lead reveal" style="--reveal-index: 2">
+          {block.subheading}
+        </p>
+      )
+    }
+
+    {
+      block.cta && (
+        <p class="hero__actions reveal" style="--reveal-index: 3">
+          {/*
+            Przycisk jest dwuwarstwowy: zewnętrzna „szyba" (obrys + ciemne tło)
+            i wewnętrzna jasna pigułka. To jeden <a> z <span> w środku, a nie
+            dwa zagnieżdżone linki — obszar klikalny to całość razem z obrysem.
+          */}
+          <a
+            class="hero__cta"
+            href={block.cta.href}
+            aria-label={block.cta.ariaLabel}
+            rel={block.cta.external ? 'noopener noreferrer' : undefined}
+            target={block.cta.external ? '_blank' : undefined}
+          >
+            <span class="hero__cta-face btn-wipe">{block.cta.label}</span>
+          </a>
+        </p>
+      )
+    }
+
+    {
+      (logos.length > 0 || rating) && (
+        <div class="hero__trust reveal" style="--reveal-index: 4">
+          {logos.length > 0 && (
+            <ul class="hero__logos">
+              {logos.map((logo) => (
+                <li class="hero__logo">
+                  <Picture
+                    image={logo}
+                    widths={[logoWidth(logo), logoWidth(logo) * 2]}
+                    sizes={`${logoWidth(logo)}px`}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {rating && (
+            <p class="hero__rating">
+              {/*
+                Gwiazdki są obrazkiem oceny, nie tekstem — dla czytnika ekranu
+                liczy się `rating.label`, czyli pełne zdanie z danych.
+              */}
+              <span class="hero__stars" aria-hidden="true">
+                {Array.from({ length: rating.value }, () => (
+                  <svg class="hero__star" viewBox="0 0 20 19" width="20" height="19">
+                    <path
+                      d="M10 0l2.472 6.219 6.657.32-5.184 4.192 1.744 6.44L10 13.54l-5.689 3.63 1.744-6.44L.871 6.54l6.657-.32z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                ))}
+              </span>
+              <span class="sr-only">{rating.label}</span>
+              <span class="hero__note">{rating.note}</span>
+            </p>
+          )}
+        </div>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background-color: var(--color-bg);
+    /*
+      Hero wypełnia ekran pod nagłówkiem, ale w obie strony jest ograniczone:
+      nie schodzi poniżej wysokości, w której rysunek orbity mieści się wokół
+      treści, i nie rośnie powyżej 900 px — na wysokim monitorze sekcja na
+      całą kolumnę wypycha resztę strony poza pierwszy ekran.
+      `svh` zamiast `vh` — na mobile pasek adresu inaczej ucina sekcję.
+
+      `clamp()` na `min-height`, nie `max-height`: gdyby treść kiedyś urosła
+      ponad 900 px (dłuższy nagłówek, większy krok czcionki), `max-height`
+      ucinałby ją razem z `overflow: hidden`. Tu sekcja przestaje ROSNĄĆ
+      z oknem, ale własna treść nadal może ją rozepchnąć.
+    */
+    min-height: clamp(
+      var(--hero-height-min),
+      calc(100svh - var(--header-height) - var(--header-border-width)),
+      var(--hero-height-max)
+    );
+    display: grid;
+    align-items: center;
+  }
+
+  .hero__backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+  }
+
+  /*
+   * PUŁAPKA (PLAYBOOK P-011): `<img>` powstaje wewnątrz `Picture.astro`, więc
+   * NIE dostaje atrybutu `data-astro-cid-*` bloku Hero — Astro przenosi zakres
+   * tylko na element główny komponentu potomnego, a tu jest nim wyrażenie
+   * warunkowe. Klasa przekazana propem wylądowałaby w HTML, ale reguła
+   * `.klasa[data-astro-cid-…]` nigdy by się nie dopięła. Dlatego selektor idzie
+   * przez rodzica w tym pliku i `:global()`, a nie przez klasę na `<img>`.
+   */
+  .hero__backdrop :global(img),
+  .hero__video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* Kadr trzyma się dołu — tam jest łuna, która nie może zniknąć przy crop. */
+    object-position: center bottom;
+  }
+
+  .hero__video {
+    position: absolute;
+    inset: 0;
+  }
+
+  /*
+   * Parallaxa przy WYJEŚCIU hero z kadru — kadr zostaje chwilę dłużej, niż
+   * pozwala na to scroll, i dopiero potem odjeżdża. Liczy to kompozytor
+   * (`animation-timeline: view()`), więc kosztuje 0 KB JS i 0 pracy na wątku
+   * głównym (AGENT-RULES §5).
+   *
+   * Idzie na obraz i wideo, a NIE na `.hero__backdrop` — backdrop ma już własną
+   * animację (`.reveal-fade`), a skrót `animation` skasowałby jej nazwę. Przy
+   * okazji zaciemnienie (`.hero__scrim`) zostaje w miejscu, co jest poprawne:
+   * ono należy do pasa nagłówka, nie do kadru.
+   *
+   * Zakres zaczyna się w spoczynku (`exit 0%` = hero jeszcze w całości widoczne),
+   * więc kadr projektowy jest nietknięty — przeglądarka bez `view()` pokazuje
+   * dokładnie to samo, co makieta. Skala 1.16 pokrywa 8 % przesunięcia z obu
+   * stron, więc spod obrazu nigdy nie wychodzi tło sekcji.
+   */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      @keyframes hero-drift {
+        from {
+          transform: none;
+        }
+        to {
+          transform: translate3d(0, -8%, 0) scale(1.16);
+        }
+      }
+
+      /*
+       * PUŁAPKA (PLAYBOOK P-050): tu MUSZĄ być longhandy — skrót `animation`
+       * razem z `animation-timeline` jest przez minifikator składany w jedną
+       * deklarację z `view()` w środku, a takiej Chrome nie przyjmuje i wyrzuca
+       * CAŁĄ regułę. W `astro dev` nie widać tego nigdy: dev nie minifikuje.
+       */
+      .hero__backdrop :global(img),
+      .hero__video {
+        animation-name: hero-drift;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: view();
+        animation-range: exit 0% exit 100%;
+      }
+
+      /*
+       * Orbita jedzie w drugą stronę i szybciej — dwie prędkości w jednym kadrze
+       * dają głębię, której samo tło nie da. `transform`, bo `translate`
+       * i `rotate` na tym elemencie są już zajęte przez wypozycjonowanie
+       * (patrz `.hero__orbit`) i są to osobne własności, więc nie kolidują.
+       */
+      @keyframes hero-orbit-drift {
+        from {
+          transform: none;
+        }
+        to {
+          transform: translate3d(0, 14%, 0);
+        }
+      }
+
+      .hero__orbit {
+        animation-name: hero-orbit-drift;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: view();
+        animation-range: exit 0% exit 100%;
+      }
+    }
+  }
+
+  .hero__scrim {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    height: var(--hero-scrim-height);
+    background-image: var(--hero-scrim-top);
+  }
+
+  /*
+   * Orbita skaluje się z oknem i celowo wychodzi poza kadr — `overflow: hidden`
+   * na sekcji przycina ją do krawędzi. Wcześniej poniżej 1024 px rysunek był
+   * chowany; teraz ta sama geometria obejmuje treść na każdej szerokości.
+   *
+   * Na telefonie dochodzi obrót o 90°: kolumna treści jest wysoka i wąska,
+   * więc leżąca elipsa musiałaby urosnąć tak, że jej łuk przechodzi przez
+   * środek nagłówka (tarcza ląduje dokładnie na H1). Stojąca elipsa mieści
+   * całą treść w świetle toru. Obrót idzie na kontenerze, nie na ścieżce —
+   * `--orbit-track` zostaje nietknięty, więc rozkład tarcz jest ten sam.
+   */
+  .hero__orbit {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: -1;
+    width: var(--hero-orbit-width-xs);
+    translate: -50% -50%;
+    rotate: 90deg;
+  }
+
+  .hero__orbit-in :global(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /*
+   * Logotypy krążą po orbicie.
+   *
+   * `offset-path` zamiast liczenia pozycji w JS: tor to ta sama ścieżka, którą
+   * rysuje elipsa `Ellipse-2` — przekazana z pliku SVG jako `--orbit-track`,
+   * żeby dane geometryczne zostały przy rysunku, a nie wyciekły do komponentu.
+   * Każda tarcza wnosi tylko własny punkt startu (`--orbit-start`) i jedzie
+   * pełne 100 % toru, więc pętla domyka się bez skoku.
+   *
+   * `offset-rotate: 0deg` — ikony mają zostać pionowo, nie obracać się z torem.
+   * `transform-origin: 0 0` ustawia kotwicę na (0,0) układu SVG; grupa wewnątrz
+   * rysunku jest o tyle przesunięta, że w tym punkcie leży środek tarczy.
+   *
+   * Animowany jest wyłącznie `offset-distance`, który przeglądarka realizuje
+   * transformacją — bez layoutu i bez malowania (AGENT-RULES §6). Zero JS.
+   */
+  /*
+   * Kontrobrót tarcz: kontener stoi na sztorc, logotypy mają zostać pionowo.
+   *
+   * PUŁAPKA: musi to być `transform`, nie własność `rotate`. Kolejność
+   * składania to translate → rotate → scale → offset → transform, więc
+   * `rotate` zadziałałby PO przesunięciu po torze i obrócił cały wektor
+   * pozycji wokół (0,0) rysunku — tarcze wylatują wtedy poza kadr (zmierzone:
+   * x ≈ 520–960 px przy kontenerze −22…412 px). `transform` jest składany
+   * jako ostatni, czyli na geometrii lokalnej, i obraca tarczę wokół jej
+   * własnego środka (`transform-origin: 0 0` = środek tarczy, patrz niżej).
+   */
+  .hero__orbit :global(.orbit-logo) {
+    /* Do kompletu zmniejszenie tarcz: przy torze rozciągniętym na 200 % okna
+       tarcze w skali 1 są względem kolumny tekstu wyraźnie większe niż na
+       desktopie i częściej lądują na literach. `scale()` w tym samym
+       `transform`, nie osobną własnością — z tego samego powodu co obrót. */
+    transform: rotate(-90deg) scale(0.72);
+  }
+
+  .hero__orbit :global(.orbit-logo) {
+    offset-path: var(--orbit-track);
+    offset-distance: var(--orbit-start);
+    offset-rotate: 0deg;
+    transform-box: view-box;
+    transform-origin: 0 0;
+    animation: orbit-travel 96s linear infinite;
+  }
+
+  @keyframes orbit-travel {
+    from {
+      offset-distance: var(--orbit-start);
+    }
+    to {
+      offset-distance: calc(var(--orbit-start) + 100%);
+    }
+  }
+
+  /*
+   * Przy `reduce` tarcze mają stać dokładnie tam, gdzie stawia je makieta.
+   * Globalna reguła z global.css skraca czas do 0,01 ms — na zamkniętym torze
+   * `start + 100%` to ten sam punkt co `start`, więc kadr końcowy jest kadrem
+   * projektowym. Mimo to wyłączamy animację wprost, żeby nie polegać na tym,
+   * że ktoś kiedyś nie zmieni globalnej reguły.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .hero__orbit :global(.orbit-logo) {
+      animation: none;
+    }
+  }
+
+  .hero__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-block: var(--space-8);
+  }
+
+  .hero__heading {
+    max-width: 42rem;
+    margin: 0;
+    font-size: var(--text-4xl);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    /* Na wąskiej kolumnie H1 łamie się na 3–4 wiersze; bez tego ostatni bywa
+       jednym słowem. Przeglądarki bez `balance` dostają zwykłe łamanie. */
+    text-wrap: balance;
+
+    /*
+      Gradient obcięty do kształtu liter. `color: transparent` jest fallbackiem
+      dla przeglądarek bez `-webkit-text-fill-color`; obie własności muszą tu
+      być, bo `background-clip: text` bez przezroczystego wypełnienia nie robi nic.
+    */
+    background-image: var(--gradient-heading);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero__lead {
+    max-width: 30rem;
+    margin-block: var(--space-5) 0;
+    color: var(--color-fg-muted);
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-relaxed);
+  }
+
+  .hero__actions {
+    margin-block: var(--space-6) 0;
+  }
+
+  .hero__cta {
+    display: inline-block;
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    background-color: var(--color-overlay);
+    text-decoration: none;
+  }
+
+  .hero__cta-face {
+    display: block;
+    padding: var(--control-padding-y) var(--control-padding-x);
+    border-radius: var(--radius-full);
+    background-color: var(--color-accent);
+    box-shadow: var(--shadow-button);
+    color: var(--color-accent-fg);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-tight);
+    white-space: nowrap;
+  }
+
+  .hero__trust {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    margin-block: var(--space-5) 0;
+  }
+
+  .hero__logos {
+    display: flex;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .hero__logo {
+    display: flex;
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    /* Loga zachodzą na siebie jak w makiecie; pierwsze zostaje na wierzchu. */
+    margin-inline-start: calc(-1 * var(--space-2));
+  }
+
+  .hero__logo:first-child {
+    margin-inline-start: 0;
+  }
+
+  /*
+   * Ten sam powód co przy tle — `<img>` z `Picture.astro` jest poza zakresem.
+   *
+   * Stała jest WYSOKOŚĆ, szerokość wynika z proporcji pliku. Wymuszony kwadrat
+   * (`width: 24px` + `object-fit: cover`) obcinał gotową grupę logotypów do
+   * pierwszej tarczy — a to ona, nie pojedyncze logo, przychodzi z materiałów.
+   * Dla pojedynczej, kwadratowej tarczy wynik jest ten sam co wcześniej.
+   */
+  .hero__logo :global(img) {
+    display: block;
+    width: auto;
+    height: var(--space-6);
+  }
+
+  .hero__rating {
+    display: flex;
+    flex-direction: column;
+    /* Pasek zaufania zawija się na mobile pod loga — wtedy wyrównanie do lewej
+       zostawia go krzywo względem wyśrodkowanej kolumny treści. */
+    align-items: center;
+    gap: var(--space-1);
+    margin: 0;
+  }
+
+  .hero__stars {
+    display: flex;
+    gap: var(--space-1);
+    color: var(--color-brand);
+  }
+
+  .hero__star {
+    display: block;
+    width: var(--text-base);
+    height: auto;
+  }
+
+  .hero__note {
+    color: var(--color-fg-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-tight);
+  }
+
+  @media (min-width: 768px) {
+    .hero__heading {
+      font-size: var(--text-5xl);
+    }
+
+    .hero__rating {
+      align-items: start;
+    }
+
+    /* Od tabletu kolumna treści jest szeroka na tyle, że leżąca elipsa znów
+       ją obejmuje — obrót schodzi razem z kontrobrotem tarcz. */
+    .hero__orbit {
+      width: min(
+        var(--hero-orbit-width),
+        max(var(--hero-orbit-width-sm), var(--hero-orbit-scale-sm))
+      );
+      rotate: none;
+    }
+
+    .hero__orbit :global(.orbit-logo) {
+      transform: none;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .hero__scrim {
+      height: var(--hero-scrim-height-lg);
+    }
+
+    /* Od tej szerokości rysunek mieści się w kolumnie i nie musi już wychodzić
+       poza kadr — wraca do szerokości z makiety. */
+    .hero__orbit {
+      width: min(100% - 2 * var(--container-gutter), var(--hero-orbit-width));
+    }
+
+    .hero__heading {
+      font-size: var(--text-6xl);
+    }
+  }
+</style>
+
+{
+  /*
+   * `is:inline` jest tu obowiązkowe, nie stylistyczne: zwykły <script> Astro
+   * WYNOSI z komponentu i dokleja do bundla strony niezależnie od warunku
+   * wokół niego. Skrypt trafiłby więc na stronę także wtedy, gdy w danych nie
+   * ma wideo — czyli dziś, przy samym obrazie tła. `is:inline` zostawia go
+   * w miejscu, więc bez `backgroundVideo` hero ma dokładnie 0 KB JS.
+   *
+   * Sam skrypt (~0,3 KB, bez zależności) godzi trzy wymagania, których nie da
+   * się pogodzić samym HTML-em — uzasadnienie w Hero.spec.md.
+   */
+  video && (
+    <script is:inline>
+      {`
+        var heroVideo = document.querySelector('[data-hero-video]')
+        if (heroVideo && window.matchMedia('(prefers-reduced-motion: no-preference)').matches) {
+          heroVideo.preload = 'auto'
+          heroVideo.autoplay = true
+          heroVideo.load()
+          var played = heroVideo.play()
+          // Odtwarzanie może zablokować tryb oszczędzania danych — wtedy
+          // zostaje obraz tła i nic się nie psuje.
+          if (played) played.catch(function () {})
+        }
+      `}
+    </script>
+  )
+}

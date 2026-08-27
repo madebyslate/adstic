@@ -1,0 +1,13 @@
+{
+  "name": "@repo/tokens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Design tokeny Adstic. Jeden blok @theme jest jednocześnie źródłem CSS custom properties i konfiguracją Tailwind v4.",
+  "exports": {
+    "./tokens.css": "./tokens.css"
+  },
+  "files": [
+    "tokens.css"
+  ]
+}

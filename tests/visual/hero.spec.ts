@@ -1,0 +1,116 @@
+import { test, expect } from './_motion-off'
+
+test.describe('Blok Hero', () => {
+  test('wygląda zgodnie z zaakceptowanym stanem', async ({ page }) => {
+    await page.goto('/')
+    await page.evaluate(() => document.fonts.ready)
+
+    const hero = page.locator('section:has(#hero-heading)')
+    await expect(hero).toBeVisible()
+    await expect(hero).toHaveScreenshot('hero.png')
+  })
+
+  test('obraz tła jest elementem LCP: ładuje się natychmiast i jest preloadowany', async ({
+    page,
+  }) => {
+    await page.goto('/')
+
+    const background = page.locator('section:has(#hero-heading) img').first()
+    await expect(background).toHaveAttribute('loading', 'eager')
+    await expect(background).toHaveAttribute('fetchpriority', 'high')
+
+    // Preload musi wskazywać dokładnie ten sam plik, który renderuje <img>.
+    const preloaded = await page.locator('link[rel="preload"][as="image"]').getAttribute('href')
+    expect(preloaded).toBeTruthy()
+    expect(await background.getAttribute('src')).toBe(preloaded)
+  })
+
+  test('obraz tła wypełnia sekcję, nie zostawia paska tła pod spodem', async ({ page }) => {
+    /*
+     * Regresja z PLAYBOOK P-011: `<img>` powstaje w `Picture.astro`, więc nie
+     * dostaje `data-astro-cid-*` bloku Hero. Reguła `object-fit: cover` cicho
+     * przestaje działać, a obraz wraca do wysokości własnej — na 390 px
+     * zostawiało to ~570 px czarnego tła pod tłem. Typecheck tego nie widzi.
+     */
+    await page.goto('/')
+
+    const box = await page.locator('section:has(#hero-heading)').boundingBox()
+    const image = await page.locator('section:has(#hero-heading) img').first().boundingBox()
+
+    expect(box).not.toBeNull()
+    expect(image).not.toBeNull()
+    expect(image!.height).toBeCloseTo(box!.height, 0)
+  })
+
+  test('tarcze orbity zostają w obrysie rysunku (obrót na mobile)', async ({ page }) => {
+    /*
+     * Regresja PLAYBOOK P-049: poniżej 768 px kontener orbity jest obrócony
+     * o 90°, a tarcze dostają kontrobrót. Kolejność składania transformacji to
+     * translate → rotate → scale → offset → transform, więc kontrobrót zapisany
+     * własnością `rotate` działa PO przesunięciu po torze i wyrzuca tarcze poza
+     * kadr (zmierzone: x ≈ 520–960 px przy kontenerze −22…412 px). Wygląda to
+     * jak „orbita bez logotypów" i nie widać tego w typechecku ani w snapshocie
+     * zrobionym w chwili, gdy akurat żadna tarcza nie jest w kadrze.
+     */
+    await page.goto('/')
+
+    const orbit = await page.locator('[class*="hero__orbit"]').first().boundingBox()
+    expect(orbit).not.toBeNull()
+
+    const discs = await page.locator('.orbit-logo').all()
+    expect(discs.length).toBeGreaterThan(0)
+
+    for (const disc of discs) {
+      const box = await disc.boundingBox()
+      expect(box).not.toBeNull()
+      // Tolerancja 1 px na zaokrąglenia; tarcza ma leżeć NA torze, czyli
+      // w obrysie rysunku, niezależnie od punktu startu.
+      expect(box!.x).toBeGreaterThanOrEqual(orbit!.x - 1)
+      expect(box!.x + box!.width).toBeLessThanOrEqual(orbit!.x + orbit!.width + 1)
+      expect(box!.y).toBeGreaterThanOrEqual(orbit!.y - 1)
+      expect(box!.y + box!.height).toBeLessThanOrEqual(orbit!.y + orbit!.height + 1)
+    }
+  })
+
+  test('nagłówek jest jedynym h1 i niesie treść mimo gradientu', async ({ page }) => {
+    await page.goto('/')
+
+    const headings = page.locator('h1')
+    await expect(headings).toHaveCount(1)
+    await expect(headings).toHaveAttribute('id', 'hero-heading')
+    await expect(headings).not.toBeEmpty()
+  })
+
+  test('ocena ma opis dla czytnika ekranu, gwiazdki są poza drzewem dostępności', async ({
+    page,
+  }) => {
+    await page.goto('/')
+
+    const hero = page.locator('section:has(#hero-heading)')
+    await expect(hero.locator('.sr-only')).toHaveText(/5/)
+    // Pięć gwiazdek, wszystkie pod rodzicem z `aria-hidden` — same w sobie
+    // nie niosą treści, więc do nazwy dostępnej trafia wyłącznie `rating.label`.
+    await expect(hero.locator('span[aria-hidden="true"] svg')).toHaveCount(5)
+  })
+
+  test('bez wideo w danych blok nie wysyła ani bajta własnego JS', async ({ page }) => {
+    /*
+     * `is:inline` przy skrypcie autoplay jest tu wymogiem, nie stylem — zwykły
+     * <script> Astro wynosi do bundla niezależnie od warunku wokół niego.
+     *
+     * Test pilnuje BLOKU, nie strony. Skrypty ruchu (obserwator wejść i Lenis)
+     * mieszkają w BaseLayout i są świadomą decyzją — patrz DECISIONS.md. Gdyby
+     * Hero kiedykolwiek zaczął wynosić własny skrypt do bundla, pojawiłby się
+     * chunk z „Hero" w nazwie i ten test go złapie.
+     */
+    const scripts: string[] = []
+    page.on('request', (request) => {
+      if (request.resourceType() === 'script') scripts.push(request.url())
+    })
+
+    await page.goto('/', { waitUntil: 'networkidle' })
+
+    const fromLayout = /\/_astro\/(BaseLayout\.astro_astro_type_script|lenis\.)/
+    expect(scripts.filter((url) => !fromLayout.test(url))).toEqual([])
+  })
+})

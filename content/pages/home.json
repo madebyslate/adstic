@@ -1,0 +1,694 @@
+{
+  "slug": "home",
+  "seo": {
+    "title": "Adstic — less guessing, more orders",
+    "description": "We run advertising campaigns for Shopify stores of Polish manufacturers — so that every zloty of your budget is returned to you with an appropriate margin.",
+    "canonicalPath": "/",
+    "ogImage": {
+      "src": "content/media/og-default.png",
+      "alt": "",
+      "width": 1200,
+      "height": 630
+    }
+  },
+  "blocks": [
+    {
+      "blockType": "hero",
+      "heading": "Less guessing more orders",
+      "subheading": "We run advertising campaigns for Shopify stores of Polish manufacturers - so that every zloty of your budget is returned to you with an appropriate margin.",
+      "background": {
+        "src": "content/media/hero-background.jpg",
+        "alt": "",
+        "width": 1440,
+        "height": 810
+      },
+      "cta": {
+        "label": "Let's increase the number of orders",
+        "href": "/contact/"
+      },
+      "trust": {
+        "logos": [
+          {
+            "src": "content/media/hero-logos.png",
+            "alt": "",
+            "width": 136,
+            "height": 33
+          }
+        ],
+        "rating": {
+          "value": 5,
+          "note": "+6 years of experience",
+          "label": "Rated 5 out of 5 stars"
+        }
+      }
+    },
+    {
+      "blockType": "trustedBy",
+      "eyebrow": "Trusted by market leaders",
+      "testimonial": {
+        "quote": "Patryk helped me quickly and efficiently improve the analytics on my custom store, so now I'm aware of what's going on. I highly recommend him and will use him again!",
+        "author": {
+          "name": "Bartek Adamczyk",
+          "role": "Founder domupielesze.pl"
+        }
+      },
+      "logos": [
+        {
+          "src": "content/media/logos/logo-bura.svg",
+          "alt": "bura.",
+          "width": 65,
+          "height": 64
+        }
+      ]
+    },
+    {
+      "blockType": "whoWeAre",
+      "eyebrow": "Who we are",
+      "lead": "A two-person team.",
+      "body": "We're not a large agency. And that's precisely why it works. We understands that handing over marketing to someone means handing over a slice of control over your business.",
+      "note": "That's why we operate transparently: you have full access to your advertising accounts, you know where every penny goes, and you always talk to the same person.",
+      "cta": {
+        "label": "Let's talk with Founders",
+        "href": "/contact/",
+        "avatar": {
+          "src": "content/media/team/patryk-wieczorek.jpg",
+          "alt": "",
+          "width": 393,
+          "height": 393
+        }
+      },
+      "cards": [
+        {
+          "kind": "person",
+          "photo": {
+            "src": "content/media/team/patryk-wieczorek.jpg",
+            "alt": "Patryk Wieczorek",
+            "width": 393,
+            "height": 393
+          },
+          "name": "Patryk Wieczorek",
+          "badge": "Owner"
+        },
+        {
+          "kind": "stat",
+          "icon": "award",
+          "value": "+6 years",
+          "description": "Experience in conducting marketing for companies"
+        },
+        {
+          "kind": "person",
+          "photo": {
+            "src": "content/media/team/sara-jaworek.jpg",
+            "alt": "Sara Jaworek",
+            "width": 393,
+            "height": 393
+          },
+          "name": "Sara Jaworek"
+        },
+        {
+          "kind": "stat",
+          "icon": "chart",
+          "value": "50%",
+          "description": "Sales increase in the first 90 days of cooperation"
+        },
+        {
+          "kind": "stat",
+          "icon": "tag",
+          "value": "90%",
+          "description": "He stays with us for a long-term cooperation"
+        }
+      ]
+    },
+    {
+      "blockType": "caseStudies",
+      "eyebrow": "Customer results",
+      "heading": "Results, not promises.",
+      "lead": "We measure the effectiveness of our advertising efforts with tangible results. See how we've helped companies across various sectors achieve increased sales, leads, and market position.",
+      "cta": {
+        "label": "Let's talk with Founders",
+        "href": "/contact/",
+        "avatar": {
+          "src": "content/media/team/patryk-wieczorek.jpg",
+          "alt": "",
+          "width": 393,
+          "height": 393
+        }
+      },
+      "featured": [
+        {
+          "title": "HANDMADE SHOP Growth in 3 years 700%",
+          "href": "/case-studies/handmade-shop/",
+          "logo": {
+            "src": "content/media/casestudies/logo-apimel.png",
+            "alt": "",
+            "width": 85,
+            "height": 85
+          },
+          "thumbnail": {
+            "src": "content/media/casestudies/handmade-shop.jpg",
+            "alt": "",
+            "width": 861,
+            "height": 780
+          }
+        },
+        {
+          "title": "+1600 inquiries in the construction industry",
+          "href": "/case-studies/construction/",
+          "logo": {
+            "src": "content/media/casestudies/logo-dr.png",
+            "alt": "",
+            "width": 57,
+            "height": 42
+          },
+          "thumbnail": {
+            "src": "content/media/casestudies/construction.jpg",
+            "alt": "",
+            "width": 861,
+            "height": 780
+          }
+        },
+        {
+          "title": "Over 5,800 additional leads in the renewable energy industry",
+          "href": "/case-studies/renewable-energy/",
+          "logo": {
+            "src": "content/media/casestudies/logo-jmsolar.png",
+            "alt": "",
+            "width": 131,
+            "height": 40
+          },
+          "thumbnail": {
+            "src": "content/media/casestudies/renewable-energy.jpg",
+            "alt": "",
+            "width": 861,
+            "height": 780
+          }
+        },
+        {
+          "title": "+55% year-on-year in the skydiving industry",
+          "href": "/case-studies/skydiving/",
+          "logo": {
+            "src": "content/media/casestudies/logo-tandemy.png",
+            "alt": "",
+            "width": 155,
+            "height": 52
+          },
+          "thumbnail": {
+            "src": "content/media/casestudies/skydiving.jpg",
+            "alt": "",
+            "width": 861,
+            "height": 780
+          }
+        }
+      ],
+      "more": [
+        {
+          "title": "2,500 leads and 1.5 million in revenue for a B2B law firm",
+          "href": "/case-studies/b2b-law-firm/",
+          "logo": {
+            "src": "content/media/casestudies/logo-delta.jpg",
+            "alt": "",
+            "width": 128,
+            "height": 128
+          }
+        },
+        {
+          "title": "Year-on-year growth of 290k for the Polish manufacturer",
+          "href": "/case-studies/polish-manufacturer/",
+          "logo": {
+            "src": "content/media/casestudies/logo-bura.jpg",
+            "alt": "",
+            "width": 128,
+            "height": 128
+          }
+        },
+        {
+          "title": "Global e-Commerce and $3 million in revenue in a year",
+          "href": "/case-studies/global-ecommerce/",
+          "logo": {
+            "src": "content/media/casestudies/logo-dr-square.jpg",
+            "alt": "",
+            "width": 128,
+            "height": 128
+          }
+        }
+      ]
+    },
+    {
+      "blockType": "ourImpact",
+      "eyebrow": "Our impact",
+      "heading": "Get instant insights into your business metrics",
+      "glow": {
+        "src": "content/media/our-impact-bg.jpg",
+        "alt": "",
+        "width": 1440,
+        "height": 820
+      },
+      "screenshot": {
+        "src": "content/media/dashboard-adstic.png",
+        "alt": "Adstic dashboard: percentage of goal, revenue, orders and ad cost for Google Ads and Meta Ads in one view",
+        "width": 1739,
+        "height": 1302
+      }
+    },
+    {
+      "blockType": "adPlacements",
+      "eyebrow": "Google Ads placements",
+      "heading": "This is what your ads look like",
+      "placements": [
+        {
+          "title": "Shopping Campaigns",
+          "preview": {
+            "src": "content/media/placements/shopping-campaigns.png",
+            "alt": "A product ad with a photo, title, price and rating standing out among Google Shopping results.",
+            "width": 1024,
+            "height": 552
+          },
+          "background": {
+            "src": "content/media/placements/shopping-campaigns-bg.jpg",
+            "alt": "",
+            "width": 1080,
+            "height": 750
+          }
+        },
+        {
+          "title": "Search Campaigns",
+          "preview": {
+            "src": "content/media/placements/search-campaigns.png",
+            "alt": "A sponsored result on a phone: headline, description and product photo above the organic results.",
+            "width": 856,
+            "height": 872
+          }
+        },
+        {
+          "title": "Display Campaigns",
+          "preview": {
+            "src": "content/media/placements/display-campaigns.png",
+            "alt": "A banner with a room photo and a headline shown on a phone while browsing.",
+            "width": 856,
+            "height": 872
+          }
+        },
+        {
+          "title": "Video Campaigns",
+          "preview": {
+            "src": "content/media/placements/video-campaigns.png",
+            "alt": "A video ad playing in a player with a progress bar and playback controls.",
+            "width": 806,
+            "height": 632
+          },
+          "background": {
+            "src": "content/media/placements/video-campaigns-bg.jpg",
+            "alt": "",
+            "width": 1080,
+            "height": 750
+          }
+        }
+      ]
+    },
+    {
+      "blockType": "howWeWork",
+      "eyebrow": "How we work",
+      "heading": "What does collaboration look like? Four steps.",
+      "lead": "Every campaign begins with understanding your business. See how we work step-by-step towards effective marketing.",
+      "steps": [
+        {
+          "title": "We're talking about your company",
+          "description": "You tell us about your company, clients, and goals. We'll review what's worked so far and what's wasted your budget. No strings attached."
+        },
+        {
+          "title": "You get a plan you understand",
+          "description": "We prepare a strategy tailored to your industry and budget. We explain in simple language the what, why, and what to expect."
+        },
+        {
+          "title": "We take over everything",
+          "description": "Analytics, campaigns, creations, settings, optimization - that's our job."
+        },
+        {
+          "title": "You have results and constant contact",
+          "description": "We don't disappear once a campaign launches. We stay in touch regularly, ensuring appropriate optimizations and measurable results."
+        }
+      ]
+    },
+    {
+      "blockType": "cta",
+      "eyebrow": "Let's talk",
+      "heading": "Focus on your business. Leave the marketing to us.",
+      "cta": {
+        "label": "Schedule a free consultation",
+        "href": "/contact/"
+      },
+      "benefitsHeading": "What will change when marketing starts working?",
+      "benefits": [
+        "Regularly appearing customers",
+        "You focus on fulfilling orders",
+        "Advertising pays off"
+      ],
+      "background": {
+        "src": "content/media/cta-bg.jpg",
+        "alt": "",
+        "width": 1200,
+        "height": 574
+      }
+    },
+    {
+      "blockType": "whyChooseUs",
+      "eyebrow": "Why choose us",
+      "heading": "The difference we deliver",
+      "description": "We know how to effectively acquire customers through online channels. We focus on real results and transparent collaboration.",
+      "cta": {
+        "label": "Schedule a free consultation",
+        "href": "/contact/"
+      },
+      "items": [
+        {
+          "icon": {
+            "src": "content/media/why-choose/contact.svg",
+            "alt": "",
+            "width": 32,
+            "height": 32
+          },
+          "title": "Constant contact",
+          "description": "We have a group on whatsapp, regular meetings and we reply the same day."
+        },
+        {
+          "icon": {
+            "src": "content/media/why-choose/contracts.svg",
+            "alt": "",
+            "width": 32,
+            "height": 32
+          },
+          "title": "No binding and long contracts",
+          "description": "You stay with us because you get results and are satisfied with the cooperation."
+        },
+        {
+          "icon": {
+            "src": "content/media/why-choose/results.svg",
+            "alt": "",
+            "width": 29,
+            "height": 29
+          },
+          "title": "Real results",
+          "description": "We make sure that advertising activities bring real customers to your company"
+        },
+        {
+          "icon": {
+            "src": "content/media/why-choose/customer.svg",
+            "alt": "",
+            "width": 29,
+            "height": 29
+          },
+          "title": "You won't be the \"50th\" customer",
+          "description": "We work with a limited number of companies, ensuring each one receives our full attention. You're not just another number in Excel; we know your business, your industry, and your goals."
+        }
+      ]
+    },
+    {
+      "blockType": "customerReviews",
+      "eyebrow": "Customer reviews",
+      "heading": "What our customers say about us",
+      "description": "We help companies effectively advertise online. We focus on partnerships and measurable results. See what our clients think of us.",
+      "background": {
+        "src": "content/media/customer-reviews-bg.jpg",
+        "alt": "",
+        "width": 1440,
+        "height": 820
+      },
+      "reviews": [
+        {
+          "quote": "Patryk helped me quickly and efficiently improve the analytics on my custom store, so now I'm aware of what's going on. I highly recommend him and will use him again!",
+          "author": "Bartek Adamczyk",
+          "rating": 5
+        },
+        {
+          "quote": "Patryk is an expert in his field – his campaigns are well-thought-out, effective, and well-optimized. I recommend Patryk 100%!",
+          "author": "Dominika Dąbrowska",
+          "rating": 5,
+          "logo": {
+            "src": "content/media/casestudies/logo-tandemy.png",
+            "alt": "",
+            "width": 155,
+            "height": 52
+          }
+        },
+        {
+          "quote": "Patryk is an expert in his field – his campaigns are well-thought-out, effective, and well-optimized. I recommend Patryk 100%!",
+          "author": "Dominika Dąbrowska",
+          "rating": 5,
+          "logo": {
+            "src": "content/media/casestudies/logo-jmsolar.png",
+            "alt": "",
+            "width": 131,
+            "height": 40
+          }
+        },
+        {
+          "quote": "Patryk is an expert in his field – his campaigns are well-thought-out, effective, and well-optimized. I recommend Patryk 100%!",
+          "author": "Dominika Dąbrowska",
+          "rating": 5,
+          "logo": {
+            "src": "content/media/casestudies/logo-apimel.png",
+            "alt": "",
+            "width": 85,
+            "height": 85
+          }
+        },
+        {
+          "quote": "Patryk is an expert in his field – his campaigns are well-thought-out, effective, and well-optimized. I recommend Patryk 100%!",
+          "author": "Dominika Dąbrowska",
+          "rating": 5,
+          "logo": {
+            "src": "content/media/casestudies/logo-dr.png",
+            "alt": "",
+            "width": 57,
+            "height": 42
+          }
+        },
+        {
+          "quote": "Patryk is an expert in his field – his campaigns are well-thought-out, effective, and well-optimized. I recommend Patryk 100%!",
+          "author": "Dominika Dąbrowska",
+          "rating": 5,
+          "logo": {
+            "src": "content/media/casestudies/logo-bura.jpg",
+            "alt": "",
+            "width": 128,
+            "height": 128
+          }
+        }
+      ]
+    },
+    {
+      "blockType": "videoReviews",
+      "eyebrow": "Video reviews",
+      "heading": "What our customers say about us",
+      "previousLabel": "Previous reviews",
+      "nextLabel": "Next reviews",
+      "closeLabel": "Close video",
+      "reviews": [
+        {
+          "video": {
+            "sources": [
+              {
+                "src": "/video/review-1.mp4",
+                "type": "video/mp4"
+              }
+            ],
+            "poster": {
+              "src": "content/media/review-1-poster.jpg",
+              "alt": "",
+              "width": 720,
+              "height": 1280
+            }
+          },
+          "author": "Monika Poniatowska"
+        },
+        {
+          "video": {
+            "sources": [
+              {
+                "src": "/video/review-2.mp4",
+                "type": "video/mp4"
+              }
+            ],
+            "poster": {
+              "src": "content/media/review-2-poster.jpg",
+              "alt": "",
+              "width": 720,
+              "height": 1280
+            }
+          },
+          "author": "Monika Poniatowska"
+        },
+        {
+          "video": {
+            "sources": [
+              {
+                "src": "/video/review-3.mp4",
+                "type": "video/mp4"
+              }
+            ],
+            "poster": {
+              "src": "content/media/review-3-poster.jpg",
+              "alt": "",
+              "width": 720,
+              "height": 1280
+            }
+          },
+          "author": "Monika Poniatowska"
+        },
+        {
+          "video": {
+            "sources": [
+              {
+                "src": "/video/review-1.mp4",
+                "type": "video/mp4"
+              }
+            ],
+            "poster": {
+              "src": "content/media/review-1-poster.jpg",
+              "alt": "",
+              "width": 720,
+              "height": 1280
+            }
+          },
+          "author": "Monika Poniatowska"
+        },
+        {
+          "video": {
+            "sources": [
+              {
+                "src": "/video/review-2.mp4",
+                "type": "video/mp4"
+              }
+            ],
+            "poster": {
+              "src": "content/media/review-2-poster.jpg",
+              "alt": "",
+              "width": 720,
+              "height": 1280
+            }
+          },
+          "author": "Monika Poniatowska"
+        },
+        {
+          "video": {
+            "sources": [
+              {
+                "src": "/video/review-3.mp4",
+                "type": "video/mp4"
+              }
+            ],
+            "poster": {
+              "src": "content/media/review-3-poster.jpg",
+              "alt": "",
+              "width": 720,
+              "height": 1280
+            }
+          },
+          "author": "Monika Poniatowska"
+        }
+      ]
+    },
+    {
+      "blockType": "faq",
+      "eyebrow": "FAQ",
+      "heading": "Frequently asked questions",
+      "description": "We answer the most common questions before starting a partnership. If you have any additional questions, please contact us.",
+      "items": [
+        {
+          "question": "How long does it take to see the first effects of an advertising campaign?",
+          "answer": "Typically, the first results are visible within 2–3 weeks of launching a campaign. However, optimization takes longer – the full picture of effectiveness is usually visible after 6–8 weeks."
+        },
+        {
+          "question": "Can I scale sales without increasing my advertising budget?",
+          "answer": "Yes – up to a point. First, we squeeze out what the current budget can give: better creatives, tighter targeting and a cleaner funnel. When those margins run out, growth needs more budget."
+        },
+        {
+          "question": "What do you do if a campaign doesn't produce the expected results?",
+          "answer": "We look for the reason in the data instead of adding budget: creative, audience, offer or the store itself. Then we change one thing at a time, so we know what actually moved the numbers."
+        },
+        {
+          "question": "Can I run Google Ads and Meta Ads campaigns simultaneously?",
+          "answer": "Yes, and in most stores that is exactly what we recommend. The two channels play different roles – Google collects existing demand, Meta creates it – so we measure them together, not against each other."
+        },
+        {
+          "question": "How do you measure the success of a campaign?",
+          "answer": "By revenue and margin, not by clicks. You get one dashboard with the goal, revenue, orders and ad cost for both channels, so the result is a number you can check yourself at any time."
+        },
+        {
+          "question": "Do you also deal with website optimization?",
+          "answer": "We handle everything that stands between the ad and the order: analytics, product pages and checkout. We point out what is worth changing and we implement it in your Shopify store together with you."
+        }
+      ]
+    },
+    {
+      "blockType": "contact",
+      "eyebrow": "Kontakt",
+      "heading": "Sprawdź, czy możemy razem pracować",
+      "description": "Wypełnij krótki formularz. Jeśli zobaczymy potencjał wzrostu, zaprosimy Cię na analizę marketingową, która wyznaczy kierunek dla Twojej sprzedaży.",
+      "background": {
+        "src": "content/media/contact-bg.jpg",
+        "alt": "",
+        "width": 1440,
+        "height": 938
+      },
+      "action": "",
+      "goalsStep": {
+        "label": "Twoje cele",
+        "heading": "Co chcesz osiągnąć?",
+        "description": "Wybierz co najmniej jedną opcję",
+        "options": [
+          "Chcę zwiększyć sprzedaż w sklepie",
+          "Chcę wiedzieć, ile realnie zarabiam na reklamie",
+          "Chcę wydelegować marketing"
+        ],
+        "errorMessage": "Zaznacz przynajmniej jedną opcję, żeby przejść dalej."
+      },
+      "detailsStep": {
+        "label": "Dane kontaktowe",
+        "heading": "Dane kontaktowe",
+        "description": "Wypełnij formularz, odezwiemy się do Ciebie",
+        "fields": [
+          {
+            "name": "name",
+            "label": "Imię",
+            "type": "text",
+            "required": true,
+            "autocomplete": "given-name"
+          },
+          {
+            "name": "phone",
+            "label": "Numer telefonu",
+            "type": "tel",
+            "required": true,
+            "autocomplete": "tel"
+          },
+          {
+            "name": "email",
+            "label": "Adres e-mail",
+            "type": "email",
+            "required": true,
+            "autocomplete": "email"
+          },
+          {
+            "name": "website",
+            "label": "Strona internetowa",
+            "type": "url",
+            "autocomplete": "url"
+          }
+        ]
+      },
+      "summaryStep": {
+        "label": "Podsumowanie",
+        "heading": "Sprawdź i wyślij",
+        "description": "Zanim wyślesz — rzuć okiem na to, co przekazujesz",
+        "goalsLabel": "Twoje cele",
+        "detailsLabel": "Dane kontaktowe",
+        "emptyLabel": "Nie podano",
+        "consent": "Akceptuję <a href=\"/privacy-policy/\">Politykę Prywatności</a> i wyrażam zgodę na przetwarzanie moich danych osobowych.",
+        "submitLabel": "Wyślij zgłoszenie"
+      },
+      "nextLabel": "Dalej",
+      "backLabel": "Wstecz"
+    }
+  ]
+}

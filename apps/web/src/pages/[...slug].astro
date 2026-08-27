@@ -1,0 +1,48 @@
+---
+import type { GetStaticPaths } from 'astro'
+import { pagePath, HOME_SLUG } from '@repo/shared'
+import { getAllPages } from '@/lib/content'
+import { getLcpPreload } from '@/lib/preload'
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import BlockRenderer from '@/components/blocks/BlockRenderer.astro'
+
+/**
+ * Wszystkie strony pochodzą z jednego routera.
+ *
+ * `getStaticPaths` wykonuje się przy buildzie, więc `getAllPages()` sięga albo
+ * po fixtures, albo po Payload API — strona nie wie, co jest źródłem. To jest
+ * cały mechanizm, dzięki któremu etap 2 nie rusza komponentów.
+ */
+export const getStaticPaths = (async () => {
+  const pages = await getAllPages()
+
+  return pages.map((page) => ({
+    // Strona główna ma `undefined`, nie `''` — inaczej Astro zbuduje /home/.
+    params: { slug: page.slug === HOME_SLUG ? undefined : page.slug },
+    props: { page },
+  }))
+}) satisfies GetStaticPaths
+
+const { page } = Astro.props
+const lcp = await getLcpPreload(page.blocks)
+---
+
+<BaseLayout seo={page.seo} path={pagePath(page.slug)}>
+  <Fragment slot="head">
+    {
+      lcp && (
+        <link
+          rel="preload"
+          as="image"
+          href={lcp.href}
+          type={lcp.type}
+          imagesrcset={lcp.imagesrcset}
+          imagesizes={lcp.imagesizes}
+          fetchpriority="high"
+        />
+      )
+    }
+  </Fragment>
+
+  <BlockRenderer blocks={page.blocks} />
+</BaseLayout>

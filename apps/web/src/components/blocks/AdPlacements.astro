@@ -1,0 +1,326 @@
+---
+import type { AdPlacementsBlock } from '@repo/shared'
+import Picture from '@/components/ui/Picture.astro'
+
+interface Props {
+  block: AdPlacementsBlock
+}
+
+const { block } = Astro.props
+const headingId = 'ad-placements-heading'
+
+/*
+ * Szerokość kafla jest ozdobnikiem układu, nie danymi (patrz AdPlacements.spec.md
+ * → „Pola”): szeroki – wąski, wąski – szeroki. Liczymy ją z pozycji na liście,
+ * więc treść nie ma jak ustawić czterech szerokich kafli obok siebie.
+ */
+const placements = block.placements.map((placement, index) => ({
+  ...placement,
+  isWide: index === 0 || index === 3,
+}))
+---
+
+{/*
+  Wejście sekcji. Grupa trzyma wszystkie animacje w środku na pierwszej klatce,
+  dopóki obserwator w BaseLayout nie uzna, że warto ją odegrać — mechanizm jest
+  opisany przy „W polu widzenia" w global.css.
+*/}
+<section class="placements" aria-labelledby={headingId} data-reveal-group>
+  <div class="container-page">
+    <p class="placements__eyebrow reveal" style="--reveal-index: 0">{block.eyebrow}</p>
+
+    {/* Etykieta wyżej jest podpisem, nagłówkiem sekcji jest to zdanie. */}
+    <h2 id={headingId} class="placements__heading reveal" style="--reveal-index: 1">{block.heading}</h2>
+
+    {/*
+      `<ul>`, nie `<div>`: to lista miejsc wyświetlania, a kolejność niesie
+      układ. Nic w niej nie jest klikalne — blok jest ilustracją, nie nawigacją.
+    */}
+    <ul class="placements__grid">
+      {
+        placements.map((placement, index) => (
+          <li
+            style={`--reveal-index: ${index + 2}`}
+            class:list={[
+              'tile',
+              'reveal',
+              placement.isWide ? 'tile--wide' : 'tile--narrow',
+              placement.background ? 'tile--float' : 'tile--device',
+            ]}
+          >
+            {placement.background && (
+              /*
+                Łuna. Wygaszamy ją przy górnej i dolnej krawędzi kafla, żeby
+                plama wtapiała się w tło kafla zamiast kończyć się kreską.
+              */
+              <div class="tile__glow" aria-hidden="true">
+                <Picture
+                  image={placement.background}
+                  widths={[540, 1080]}
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                />
+              </div>
+            )}
+
+            <h3 class="tile__title">{placement.title}</h3>
+
+            {/*
+              `--placement-media-w` to szerokość PLIKU podana danymi. Makiety są
+              eksportami 2×, więc CSS renderuje je w połowie tej wartości —
+              dzięki temu w komponencie nie ma ani jednej szerokości z ręki
+              (spec → „Skala makiet”).
+            */}
+            <div
+              class:list={['tile__media', placement.background ? 'tile__media--float' : 'tile__media--device']}
+              style={`--placement-media-w: ${placement.preview.width}`}
+            >
+              <Picture
+                image={placement.preview}
+                widths={[placement.preview.width / 2, placement.preview.width]}
+                sizes={`${placement.preview.width / 2}px`}
+              />
+            </div>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  .placements {
+    background-color: var(--color-bg);
+    padding-block: var(--section-padding-y);
+  }
+
+  .placements__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-5);
+    color: var(--color-fg);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-wide);
+    line-height: var(--leading-tight);
+    text-transform: uppercase;
+  }
+
+  .placements__eyebrow::before {
+    content: '';
+    width: var(--space-1);
+    height: var(--space-1);
+    background-color: var(--color-brand);
+  }
+
+  .placements__heading {
+    max-width: var(--placement-heading-width);
+    margin: 0 0 var(--space-7);
+    color: var(--color-fg);
+    font-family: var(--font-heading);
+    /* 48 px dotyczy desktopu — na 390 px zostawiałoby dwa słowa w wierszu. */
+    font-size: var(--text-3xl);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--leading-snug);
+    text-wrap: balance;
+  }
+
+  .placements__grid {
+    display: grid;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: var(--placement-tile-min-height-narrow);
+    padding: var(--space-6);
+    border: 1px solid var(--placement-tile-border);
+    border-radius: var(--radius-media);
+    background-color: var(--placement-tile-bg);
+    /*
+      Kafel jest kadrem: makieta w wariancie „device” wychodzi poza jego dolną
+      krawędź i ma być tam ucięta, a łuna nie może wyjść poza zaokrąglenie.
+    */
+    overflow: hidden;
+  }
+
+  .tile__glow {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* PUŁAPKA (PLAYBOOK P-011): `<img>` z Picture.astro nie ma `data-astro-cid-*`
+     tego bloku — selektor musi iść przez rodzica i `:global()`. */
+  .tile__glow :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /*
+    Wygaszenie góry i dołu łuny. Jeden pseudoelement z dwoma gradientami, bo to
+    jedna warstwa szyby nad tym samym obrazem — dwa elementy dawałyby dwa razy
+    ten sam stacking bez różnicy wizualnej.
+  */
+  .tile__glow::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: var(--placement-scrim-top), var(--placement-scrim-bottom);
+  }
+
+  .tile__title {
+    /*
+      Tytuł i makieta leżą NAD łuną — bez tego tło kafla przykrywałoby tekst.
+      `position: relative` wystarczy: łuna nie ma własnego `z-index`.
+    */
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    color: var(--color-fg-soft);
+    font-family: var(--font-heading);
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-normal);
+    line-height: var(--leading-snug);
+  }
+
+  /*
+    Kwadrat przy tytule. Kolor idzie z POZYCJI kafla w sekcji, nie z danych
+    (spec → „Pola”) — stąd cztery reguły `nth-child`, a nie zmienna w treści.
+  */
+  .tile__title::before {
+    content: '';
+    flex: none;
+    width: var(--placement-dot-size);
+    height: var(--placement-dot-size);
+    background-color: var(--placement-dot-1);
+  }
+
+  .tile:nth-child(2) .tile__title::before {
+    background-color: var(--placement-dot-2);
+  }
+
+  .tile:nth-child(3) .tile__title::before {
+    background-color: var(--placement-dot-3);
+  }
+
+  .tile:nth-child(4) .tile__title::before {
+    background-color: var(--placement-dot-4);
+  }
+
+  /*
+    Kafel bez tła nie ma dolnego paddingu: makieta ma DOTYKAĆ dolnej krawędzi,
+    a nie stać nad nią. Padding zostaje w kaflu z tłem — tam makieta jest
+    wyśrodkowana w kadrze, więc luz musi być symetryczny.
+  */
+  .tile--device {
+    padding-block-end: 0;
+  }
+
+  .tile__media {
+    position: relative;
+    /* Kadr zabiera całą resztę kafla — to jego wysokość, a nie wysokość
+       makiety, decyduje o tym, gdzie plik zostanie przycięty. */
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    margin-block-start: var(--space-6);
+  }
+
+  .tile__media :global(img) {
+    display: block;
+    /* Plik jest eksportem 2×; `--placement-media-w` to jego szerokość podana
+       danymi, więc renderujemy go w połowie. Na wąskim ekranie wygrywa 100 %. */
+    width: min(100%, calc(var(--placement-media-w) * var(--placement-media-scale) * 1px));
+    height: auto;
+  }
+
+  /* Z tłem: makieta stoi w środku kadru i jest cała widoczna. */
+  .tile__media--float {
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tile__media--float :global(img) {
+    max-height: 100%;
+    /* Makiety mają różne proporcje — przy niskim kadrze o rozmiarze decyduje
+       wysokość, nie szerokość, więc obraz musi móc zwęzić się poniżej `width`. */
+    width: auto;
+    max-width: min(100%, calc(var(--placement-media-w) * var(--placement-media-scale) * 1px));
+    object-fit: contain;
+  }
+
+  /*
+    Bez tła: makieta stoi na dolnej krawędzi kafla i przenika w nią przez
+    wygaszenie. `absolute` — inaczej pełna wysokość telefonu rozpychałaby kafel
+    do 800 px; kafel przycina wszystko, co wyjdzie poza jego krawędź.
+  */
+  .tile__media--device {
+    justify-content: center;
+  }
+
+  .tile__media--device :global(img) {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: 50%;
+    translate: -50% 0;
+  }
+
+  /*
+    Wygaszenie dołu makiety. `::after`, nie `::before` — ta warstwa ma leżeć NAD
+    makietą, a nie pod nią, więc kolejność w drzewie działa tu na naszą korzyść
+    (odwrotnie niż w PLAYBOOK P-040). Ten sam gradient co przy dolnej krawędzi
+    łuny: obraz ma wtopić się w kafel, a nie skończyć się kreską.
+  */
+  .tile__media--device::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: var(--placement-scrim-bottom);
+    pointer-events: none;
+  }
+
+  @media (min-width: 768px) {
+    .placements__heading {
+      font-size: var(--text-4xl);
+    }
+
+    .tile {
+      min-height: var(--placement-tile-min-height);
+    }
+
+    .placements__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    /*
+      Wiersz to 8 + 5 kolumn, drugi 5 + 8. Podział należy do SIATKI, nie do
+      kafli — dzięki temu odwrócona kolejność w drugim wierszu trafia w te same
+      linie pionowe, zamiast być drugą parą szerokości.
+    */
+    .placements__grid {
+      grid-template-columns: repeat(var(--placement-grid-columns), minmax(0, 1fr));
+    }
+
+    .tile--wide {
+      grid-column: span var(--placement-span-wide);
+    }
+
+    .tile--narrow {
+      grid-column: span var(--placement-span-narrow);
+    }
+  }
+</style>

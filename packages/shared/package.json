@@ -1,0 +1,23 @@
+{
+  "name": "@repo/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Jedyne źródło kształtu danych Adstic: schematy zod bloków, prymitywy i typy stron. Konsumowane przez apps/web i apps/cms.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./blocks": "./src/blocks/index.ts",
+    "./primitives": "./src/primitives.ts"
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

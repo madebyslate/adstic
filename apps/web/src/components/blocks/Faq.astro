@@ -1,0 +1,285 @@
+---
+import type { FaqBlock } from '@repo/shared'
+
+interface Props {
+  block: FaqBlock
+}
+
+const { block } = Astro.props
+const headingId = 'faq-heading'
+---
+
+{/*
+  Wejście sekcji. Grupa trzyma wszystkie animacje w środku na pierwszej klatce,
+  dopóki obserwator w BaseLayout nie uzna, że warto ją odegrać — mechanizm jest
+  opisany przy „W polu widzenia" w global.css.
+*/}
+<section class="faq" aria-labelledby={headingId} data-reveal-group>
+  <div class="container-page faq__grid">
+    <div class="faq__intro">
+      {/*
+        Tu etykieta jest podpisem, a nie nagłówkiem sekcji (inaczej niż
+        w TrustedBy i WhoWeAre) — nagłówkiem jest pełne zdanie pod nią.
+      */}
+      <p class="faq__eyebrow reveal" style="--reveal-index: 0">{block.eyebrow}</p>
+
+      <h2 id={headingId} class="faq__heading reveal" style="--reveal-index: 1">{block.heading}</h2>
+      <p class="faq__description reveal" style="--reveal-index: 2">{block.description}</p>
+    </div>
+
+    <div class="faq__list">
+      {
+        block.items.map((item, index) => (
+          /*
+            Rozwijanie stoi na natywnym <details>, więc blok kosztuje 0 KB JS,
+            a klawiatura i czytniki ekranu działają bez jednej linijki ARIA.
+            Atrybut `name` robi z listy akordeon WYKLUCZAJĄCY (otwarte jedno
+            pytanie naraz). Gdzie przeglądarka go nie zna — lista działa dalej,
+            tylko pozwala otworzyć kilka pozycji; to degradacja, nie awaria.
+          */
+          <details class="faq__item reveal" style={`--reveal-index: ${index + 2}`} name="faq" open={index === 0}>
+            <summary class="faq__question">
+              <span class="faq__question-text">{item.question}</span>
+
+              {/*
+                Jedna ikona na oba stany: pionowa kreska znika przy otwarciu,
+                zostaje minus. Dwa osobne SVG znaczyłyby dwa razy więcej HTML-u
+                i przełączanie `display`, czyli ruch, którego nie da się
+                animować kompozycją (AGENT-RULES §6).
+              */}
+              <span class="faq__icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path
+                    class="faq__icon-bar"
+                    d="M4.16797 10H15.8346"
+                    stroke="currentColor"
+                    stroke-width="1.66667"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    class="faq__icon-bar faq__icon-bar--vertical"
+                    d="M10 4.16699V15.8337"
+                    stroke="currentColor"
+                    stroke-width="1.66667"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+            </summary>
+
+            <p class="faq__answer">{item.answer}</p>
+          </details>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .faq {
+    padding-block: var(--section-padding-y);
+    /* Tło jest tłem strony — sekcja go nie maluje. */
+
+    /*
+      Odblokowuje przejście do słowa kluczowego `auto` przy animowaniu
+      wysokości. Właściwość jest dziedziczona, więc stoi tu, na sekcji —
+      nie na `html`, bo płacić za nią ma tylko ten blok.
+    */
+    interpolate-size: allow-keywords;
+  }
+
+  .faq__grid {
+    display: grid;
+    gap: var(--space-7);
+  }
+
+  /* ── Lewa kolumna ───────────────────────────────────────────────────────── */
+
+  .faq__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-5);
+    color: var(--color-fg);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-wide);
+    line-height: var(--leading-tight);
+    text-transform: uppercase;
+  }
+
+  .faq__eyebrow::before {
+    content: '';
+    width: var(--space-1);
+    height: var(--space-1);
+    background-color: var(--color-brand);
+  }
+
+  .faq__heading {
+    margin: 0 0 var(--space-5);
+    color: var(--color-fg);
+    font-family: var(--font-heading);
+    /* 48 px dotyczy desktopu — na 390 px zostawiałoby dwa słowa w wierszu. */
+    font-size: var(--text-3xl);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--leading-display);
+  }
+
+  .faq__description {
+    max-width: var(--faq-intro-width);
+    margin: 0;
+    color: var(--color-fg-muted);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--leading-relaxed);
+  }
+
+  /* ── Lista pytań ────────────────────────────────────────────────────────── */
+
+  .faq__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .faq__item {
+    border-radius: var(--radius-media);
+    background-color: var(--faq-panel-bg);
+    transition: background-color var(--duration-base) var(--ease-standard);
+  }
+
+  .faq__item:hover {
+    background-color: var(--faq-panel-bg-hover);
+  }
+
+  /*
+    Rozwijanie: `<details>` samo w sobie przełącza treść skokowo, bo jego
+    zawartość jest do niedawna nieanimowalna. `::details-content` daje do niej
+    dostęp jako do pudełka, a `interpolate-size` na sekcji pozwala dojechać
+    do `auto` — więc wysokość, krycie i przesunięcie idą jednym przejściem,
+    bez skryptu mierzącego cokolwiek.
+
+    `content-visibility` musi być w tej samej liście z `allow-discrete`:
+    bez tego przeglądarka chowa treść natychmiast po zamknięciu i animacja
+    wyjścia nie ma czego pokazać.
+  */
+  .faq__item::details-content {
+    block-size: 0;
+    overflow: hidden;
+    opacity: 0;
+    translate: 0 calc(-1 * var(--space-2));
+    content-visibility: hidden;
+    transition:
+      block-size var(--duration-base) var(--ease-standard),
+      opacity var(--duration-base) var(--ease-standard),
+      translate var(--duration-base) var(--ease-standard),
+      content-visibility var(--duration-base) allow-discrete;
+  }
+
+  .faq__item[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+    translate: 0 0;
+    content-visibility: visible;
+  }
+
+  .faq__question {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-5);
+    padding: var(--faq-panel-padding);
+    color: var(--color-fg);
+    font-family: var(--font-heading);
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-normal);
+    cursor: pointer;
+    /* Trójkącik `<details>` znika w dwóch miejscach: `list-style` obsługuje
+       silniki zgodne ze standardem, pseudoelement — starsze WebKity. */
+    list-style: none;
+  }
+
+  .faq__question::-webkit-details-marker {
+    display: none;
+  }
+
+  /* Obrys focusa ma obejmować cały wiersz, a nie tekst z ikoną osobno. */
+  .faq__question:focus-visible {
+    border-radius: var(--radius-media);
+  }
+
+  .faq__icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: var(--faq-icon-size);
+    height: var(--faq-icon-size);
+    border-radius: var(--radius-full);
+    background-color: var(--color-control-ghost);
+    /* Kolor kresek idzie z `currentColor` — jeden przełącznik na oba stany. */
+    color: var(--color-icon-idle);
+    transition:
+      color var(--duration-base) var(--ease-standard),
+      background-color var(--duration-base) var(--ease-standard);
+  }
+
+  .faq__question:hover .faq__icon,
+  .faq__item[open] .faq__icon {
+    color: var(--color-fg-soft);
+  }
+
+  .faq__icon-bar--vertical {
+    transform-origin: center;
+    transition:
+      opacity var(--duration-base) var(--ease-standard),
+      rotate var(--duration-base) var(--ease-standard);
+  }
+
+  /* Plus → minus: pionowa kreska dokręca się do poziomej i gaśnie. Zmieniamy
+     wyłącznie `opacity` i `rotate`, więc przejście nie kosztuje layoutu. */
+  .faq__item[open] .faq__icon-bar--vertical {
+    opacity: 0;
+    rotate: 90deg;
+  }
+
+  .faq__answer {
+    /* Odpowiedź trzyma lewą krawędź pytania, a od ikony jest odsunięta —
+       dlatego prawy padding jest większy o szerokość ikony z odstępem. */
+    margin: 0;
+    padding: 0 calc(var(--faq-panel-padding) + var(--faq-icon-size) + var(--space-5))
+      var(--faq-panel-padding) var(--faq-panel-padding);
+    color: var(--color-fg-muted);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--leading-relaxed);
+  }
+
+  @media (min-width: 768px) {
+    .faq__grid {
+      grid-template-columns: var(--faq-columns);
+      gap: var(--space-8);
+    }
+
+    .faq__heading {
+      font-size: var(--text-4xl);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    /*
+      Lepka kolumna dopiero tam, gdzie lista jest wyraźnie wyższa od tekstu.
+      Poniżej 1024 px nie ma czego przewijać, a `sticky` bez zapasu miejsca
+      daje wrażenie zacinającego się nagłówka.
+    */
+    .faq__intro {
+      position: sticky;
+      inset-block-start: calc(var(--header-height) + var(--space-7));
+      align-self: start;
+    }
+  }
+</style>

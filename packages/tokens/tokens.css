@@ -1,0 +1,907 @@
+/*
+ * Design tokeny Adstic — JEDYNE źródło wartości wizualnych (AGENT-RULES §4).
+ *
+ * Dlaczego jeden `@theme`, a nie `:root` + osobny most do Tailwinda:
+ * w Tailwind v4 `@theme` emituje te zmienne do `:root` I generuje z nich klasy.
+ * Rozbicie na dwa pliki dałoby `--color-bg: var(--color-bg)` — samoreferencję,
+ * która unieważnia właściwość. Tu `bg-bg` i `var(--color-bg)` to ta sama wartość.
+ *
+ * Zasady:
+ *   – w komponentach używasz klasy Tailwind albo `var(--token)`, nigdy literału,
+ *   – wartość spoza tokenów = zgłoszenie, nie „magic number",
+ *   – nowy token dodajesz tutaj, nie w komponencie.
+ *
+ * Sekcje `TODO(figma)` czekają na dostęp do pliku Figmy. Wartości bez tego
+ * znacznika pochodzą ze specyfikacji bloku Hero i są docelowe.
+ */
+
+@theme {
+  /* ── Kolory ─────────────────────────────────────────────────────────────── */
+  /*
+   * Motyw jest ciemny i jednomotywowy — nie ma wariantu jasnego, więc
+   * `fg-inverse` znaczy „tekst na jasnej plamie" (przycisk CTA), nie „dark mode".
+   */
+  --color-bg: #0d0f0d;
+  --color-bg-subtle: #111311;
+  /*
+   * Nagłówek stoi na własnym odcieniu, o jeden stopień jaśniejszym od tła
+   * strony. Różnica to 1/1/1 na kanał — sama z siebie niewidoczna, ale hero
+   * zaczyna się gradientem z tej wartości (`--hero-scrim-top`), więc pas
+   * nagłówka i góra hero muszą wychodzić z DOKŁADNIE tego samego koloru.
+   * Osobny token, nie `--color-bg`, bo to decyzja o nagłówku, nie o tle.
+   */
+  --color-header-bg: #0e100e;
+  --color-surface: #1e1e1e;
+  /* Plamy w sekcji TrustedBy: box opinii jest CIEMNIEJSZY od tła, kafel
+     logotypu JAŚNIEJSZY — stąd dwie nazwy, a nie jeden odcień z opacity. */
+  --color-surface-sunken: #090b09;
+  --color-surface-raised: #0f110f;
+  /* Pas kroków w HowWeWork: płyta pod kaflami jest CIEMNIEJSZA od tła strony,
+     kafel — jaśniejszy. Prześwit płyty między kaflami jest jedynym „obrysem”
+     w tym bloku, stąd dwa osobne odcienie, a nie jeden z opacity. */
+  --color-surface-rail: #0a0c0a;
+  --color-surface-step: #131413;
+
+  /* Kafel ze ZDJĘCIEM w siatce WhoWeAre. Jaśniejszy od `raised`, ciemniejszy
+     od `surface` — wartość z makiety, nie odcień wyliczony z istniejących. */
+  --color-surface-card: #171717;
+  /* Kafel z samą liczbą jest o stopień ciemniejszy — zdjęcie ma wychodzić
+     do przodu, sucha statystyka ma zostawać w tle. */
+  --color-surface-stat: #131413;
+
+  --color-fg: #fefff1;
+  --color-fg-muted: rgb(254 255 241 / 0.6);
+  /* Stan PRZED odsłonięciem tekstu w WhoWeAre. Kontrast ~3:1 — dlatego jest to
+     stan przejściowy animacji, nigdy docelowy wygląd treści. */
+  --color-fg-dim: rgb(254 255 241 / 0.3);
+  --color-fg-inverse: #0d0f0d;
+  /*
+   * Zdanie pod logo w stopce. To `--color-fg` na 40 % krycia — nie
+   * `--color-fg-soft-muted`, bo tamten jest kremem `#f8f7f4`, a tu wartość
+   * z makiety jest wprost `rgba(254, 255, 241, 0.40)`.
+   *
+   * DŁUG: ≈ 3,1:1 na `--color-bg`, poniżej AA dla tekstu — ta sama sprawa co
+   * przy opisach kroków w HowWeWork, do rozstrzygnięcia razem z Figmą.
+   */
+  --color-fg-faint: rgb(254 255 241 / 0.4);
+  /*
+   * Druga kremowa biel z makiety (HowWeWork). Różnica względem `--color-fg`
+   * to 6–13 na kanale — na oko nieodróżnialna, ale wartość jest podana wprost,
+   * więc do czasu dostępu do Figmy są to dwa tokeny, nie jeden (ta sama zasada
+   * co przy `--color-brand-glow`).
+   */
+  --color-fg-soft: #f8f7f4;
+  /* Opisy kroków. 40 % krycia daje ≈ 3,1:1 — poniżej AA dla tekstu; wartość
+     z makiety, otwarte pytanie w HowWeWork.spec.md. */
+  --color-fg-soft-muted: rgb(248 247 244 / 0.4);
+
+  /* Akcent = jasna plama przycisku głównego; jego tekst jest ciemny. */
+  --color-accent: #fefff1;
+  --color-accent-fg: #0d0f0d;
+  /* Przycisk „Let's talk with Founders" jest CZYSTĄ bielą, nie kremem — tak
+     stoi w makiecie i tak wygląda w każdym miejscu, w którym się powtarza. */
+  --color-accent-white: #ffffff;
+
+  /* Czerwień z sygnetu. Wyłącznie logo i mikroakcenty (gwiazdki oceny). */
+  --color-brand: #ff0043;
+  /*
+   * Druga czerwień z makiety: światło na pionowej kresce i plakietka „Owner"
+   * w WhoWeAre. Różnica względem `--color-brand` to 18 na kanale — widoczna,
+   * więc dopóki Figma nie powie, że to jedna zmienna, są to dwa tokeny.
+   */
+  --color-brand-glow: #ff0055;
+
+  --color-border: rgb(254 255 241 / 0.12);
+  /* Obrys kafla WhoWeAre — kolor, nie krycie: na `--color-surface-card`
+     przezroczysta biel dałaby inny odcień niż podany #181918. */
+  --color-border-card: #181918;
+  /* Włos pionowej kreski w tle WhoWeAre. */
+  --color-border-hairline: #232423;
+  /* Obrys pod nagłówkiem. Czysta biel, nie kremowy `--color-fg` — przy 6 %
+     krycia różnica jest nieistotna wizualnie, ale wartość jest z makiety. */
+  --color-border-subtle: rgb(255 255 255 / 0.06);
+  /* Kreska nad sekcją CaseStudies. 9 %, nie 6 % — ta ma być widoczna jako
+     podział strony, tamta tylko domyka kafel. Wartość podana wprost. */
+  --color-border-rule: rgb(255 255 255 / 0.09);
+
+  /*
+   * Teksty na płycie CTA (pytanie nad plakietkami i same plakietki). Czysta
+   * biel przy 70 % krycia, nie krem `--color-fg-*`: wartość jest podana wprost,
+   * a leży na czerwonym kadrze, nie na tle strony.
+   */
+  --color-fg-on-panel: rgb(255 255 255 / 0.7);
+
+  /* Focus musi być widoczny na ciemnym tle — biel z pełnym kontrastem. */
+  --color-focus: #fefff1;
+
+  /* Podkład pod „obramówką" CTA: ciemna szyba, nie kolor. */
+  --color-overlay: rgb(0 0 0 / 0.13);
+
+  /* Ikony w kaflach statystyk są celowo przygaszone — to nie jest tekst. */
+  --color-icon-muted: #4e4e4b;
+  /* Ikona ZAMKNIĘTEGO pytania w FAQ. Jaśniejsza od `icon-muted` (#4e4e4b),
+     bo tam ikona jest ozdobą kafla, a tu — jedynym znakiem, że pozycja się
+     rozwija. Po otwarciu kreska przechodzi na `--color-fg-soft`. */
+  --color-icon-idle: #6f6f6d;
+  /* Podkładka pod ikoną FAQ: jasna plama o krycu 5 %, nie kolor — ma się
+     zachować nad każdym tłem, na którym kafel kiedyś stanie. */
+  --color-control-ghost: rgb(248 247 244 / 0.05);
+
+  /* ── Typografia ─────────────────────────────────────────────────────────── */
+  /*
+   * Jedna rodzina na całą stronę: Inter Display (SIL OFL 1.1), self-hosted,
+   * subset latin + latin-ext, wagi 400 i 500. Deklaracje @font-face i metryki
+   * fontu zastępczego są w apps/web/src/styles/fonts.css.
+   */
+  --font-heading:
+    "Inter Display", "Inter Display Fallback", system-ui, sans-serif;
+  --font-body: "Inter Display", "Inter Display Fallback", system-ui, sans-serif;
+  /*
+   * Etykiety techniczne (badge nad sekcją). Docelowo „Google Sans Code” —
+   * pliku jeszcze nie mamy, a zewnętrzny origin jest wykluczony, więc do czasu
+   * dostarczenia .woff2 wchodzi monospace systemowy. Fallback jest wypisany
+   * jawnie, bo to on renderuje się DZIŚ.
+   */
+  --font-mono: "Google Sans Code", ui-monospace, "SF Mono", "Menlo", monospace;
+
+  --text-xs: 0.75rem; /* 12 px */
+  --text-sm: 0.875rem; /* 14 px — nawigacja, etykiety przycisków */
+  --text-base: 1rem; /* 16 px */
+  --text-lg: 1.125rem; /* 18 px — opis pod nagłówkiem hero */
+  --text-xl: 1.375rem; /* 22 px */
+  --text-2xl: 1.75rem; /* 28 px */
+  --text-3xl: 2.25rem; /* 36 px */
+  --text-4xl: 3rem; /* 48 px — H1 na mobile */
+  --text-5xl: 4rem; /* 64 px — H1 na tablecie */
+  --text-6xl: 5.875rem; /* 94 px — H1 hero na desktopie */
+
+  --leading-tight: 1;
+  --leading-snug: 1.1;
+  /* 44/36 z makiety — wielkie zdanie w WhoWeAre. Między `snug` a `normal`. */
+  --leading-display: 1.22;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.55;
+
+  --tracking-tight: -0.03em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.04em;
+
+  /* Ship'ujemy tylko 400 i 500 — `bold` celowo wskazuje na 500, żeby żadne */
+  /* miejsce nie wywołało syntetycznego pogrubienia przeglądarki.           */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 500;
+
+  /* ── Przestrzeń ─────────────────────────────────────────────────────────── */
+  /* Skala nazwana, nie mnożnik — `p-5` to krok skali, nie 20 px. */
+  --spacing-0: 0rem;
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.5rem;
+  --spacing-6: 2rem;
+  --spacing-7: 3rem;
+  --spacing-8: 4rem;
+  --spacing-9: 6rem;
+  --spacing-10: 8rem;
+
+  /* ── Promienie ──────────────────────────────────────────────────────────── */
+  --radius-none: 0px;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem; /* 8 px — kafel logotypu */
+  --radius-card: 0.625rem; /* 10 px — box opinii */
+  --radius-media: 0.75rem; /* 12 px — zdjęcie w kaflu WhoWeAre */
+  --radius-block: 0.9375rem; /* 15 px — kafel WhoWeAre */
+  --radius-lg: 1rem;
+  --radius-full: 9999px;
+
+  /* ── Cienie ─────────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 16px 40px -8px rgb(0 0 0 / 0.5);
+  /* Z Figmy 1:1. Rozmycie 2 px przy rozsunięciu -4 px daje cień praktycznie */
+  /* niewidoczny — przenosimy wartość bez „poprawiania" jej.                 */
+  --shadow-button: 0 2px 2px -4px rgb(0 0 0 / 0.6);
+  /*
+   * Płyta CTA. Makieta podaje oba cienie w jednej deklaracji, ale robią dwie
+   * różne rzeczy i — co ważniejsze — malują się w innych warstwach: zewnętrzny
+   * (rzucony daleko w dół, rozsunięcie -105 px) siedzi na samej płycie,
+   * wewnętrzne czerwone światło musi leżeć NAD kadrem w tle, więc trafia na
+   * nakładkę. Cień `inset` na płycie zniknąłby pod jej dzieckiem z obrazem.
+   */
+  --shadow-cta-panel: 0 142px 37.5px -105px rgb(0 0 0 / 0.25);
+  --shadow-cta-panel-inner: 0 4px 41.5px 0 rgb(255 60 60 / 0.25) inset;
+  /* Kafel WhoWeAre. Klient podał też wariant `0 21.429px 40.357px` — do
+     rozstrzygnięcia przy dostępie do Figmy, patrz WhoWeAre.spec.md. */
+  --shadow-card: 0 18px 33.9px 0 rgb(0 0 0 / 0.25);
+
+  /* ── Ruch ───────────────────────────────────────────────────────────────── */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out-token: cubic-bezier(0, 0, 0, 1);
+  --ease-in-out-token: cubic-bezier(0.5, 0, 0, 1);
+  /*
+   * Krzywa wejść. Prawie cały dystans pokonuje w pierwszej ćwiartce czasu, więc
+   * element „dolatuje" i osiada zamiast dojeżdżać ze stałą prędkością — to jest
+   * różnica między animacją, która wygląda drogo, a taką, która wygląda na
+   * `ease-out`. Nie mieszać z `--ease-standard`: tamta jest do mikrointerakcji
+   * (hover, focus), ta do choreografii wejścia.
+   */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ── Breakpointy ────────────────────────────────────────────────────────── */
+  /* Te same szerokości, w których porównujemy z Figmą (AGENT-RULES §3.5). */
+  --breakpoint-sm: 390px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1440px;
+}
+
+/*
+ * Tokeny bez odpowiednika w przestrzeniach nazw Tailwinda oraz aliasy nazw
+ * wymaganych przez AGENT-RULES §4. Używasz ich przez `var(--token)`.
+ */
+:root {
+  /* czasy trwania — Tailwind nie ma dla nich namespace'u */
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 450ms;
+  /*
+   * Czas jednego wejścia. Dłuższy od `--duration-slow` i to celowo: wejście
+   * sekcji ogląda się raz, w spokoju, i przy krzywej `--ease-out-expo` realny
+   * ruch kończy się i tak koło 300 ms — reszta to dojazd ostatnich pikseli.
+   */
+  --duration-reveal: 900ms;
+
+  /* layout */
+  /*
+   * 1240 px. Wynika z pozycji logo i przycisku „Contact Us" w makiecie:
+   * przy ramce 1440 px zostaje po ~100 px marginesu z każdej strony.
+   */
+  --container-max: 77.5rem;
+  --container-gutter: var(--spacing-4);
+  --container-gutter-lg: var(--spacing-6);
+  --header-height: 3.5rem;
+  /* Wydzielone, bo wysokość hero musi odjąć nagłówek RAZEM z jego obrysem —
+     inaczej strona dostaje 1 px pionowego scrolla przy pełnowymiarowym hero. */
+  --header-border-width: 1px;
+
+  /* warstwy */
+  --z-sticky: 10;
+  --z-header: 20;
+  --z-overlay: 30;
+  --z-modal: 40;
+
+  /*
+   * Kontrolki (przyciski, pigułki nawigacji). 28 px w poziomie nie należy do
+   * skali odstępów — to wymiar komponentu, nie krok rytmu strony, więc żyje
+   * jako token semantyczny, a nie jako sztuczny stopień `--spacing-*`.
+   */
+  --control-padding-y: var(--spacing-3); /* 12 px */
+  --control-padding-x: 1.75rem; /* 28 px */
+  /* Odstęp opisu od przycisku pod nim. 28 px nie należy do skali odstępów —
+     to relacja dwóch konkretnych elementów z makiety, nie krok rytmu. */
+  --cta-gap: 1.75rem; /* 28 px */
+
+  /*
+   * Gradient nagłówka hero. Wartość musi być tokenem, bo powtarza się
+   * w `background-clip: text` i w fallbacku dla trybu wysokiego kontrastu.
+   */
+  /*
+   * Szerokość rysunku orbity w hero. Nie jest równa `--container-max` —
+   * elipsy wychodzą poza kolumnę treści, tak jak w makiecie. Patrz Hero.spec.md.
+   */
+  /*
+   * Wysokość hero. Sekcja rośnie z oknem, ale w obie strony jest ograniczona:
+   * dołem — żeby rysunek orbity dalej obejmował treść przy niskim oknie,
+   * górą — żeby na wysokim monitorze nie rozciągała się na całą kolumnę
+   * i nie odsuwała reszty strony poza pierwszy ekran.
+   */
+  --hero-height-min: 44rem; /* 704 px */
+  --hero-height-max: 56.25rem; /* 900 px */
+
+  --hero-orbit-width: 80rem; /* 1280 px */
+  /*
+   * Poniżej 1024 px rysunek nie mieści się w kolumnie — zamiast go chować,
+   * skalujemy go WZGLĘDEM OKNA i pozwalamy wyjść poza kadr (hero ma
+   * `overflow: hidden`). Elipsy wchodzą wtedy z boków, a tarcze przejeżdżają
+   * górnym i dolnym łukiem wokół treści. `min(...)` z wartością desktopową
+   * pilnuje, żeby przy 1023 px rysunek nie urósł ponad docelowe 1280 px.
+   */
+  --hero-orbit-width-sm: 30rem; /* 480 px — dolna granica przy wąskim oknie */
+  --hero-orbit-scale-sm: 175vw;
+  /*
+   * Poniżej 768 px rysunek jest dodatkowo OBRACANY o 90° — leżąca elipsa nie
+   * ma jak objąć wysokiej, wąskiej kolumny treści, a stojąca obejmuje ją
+   * dokładnie tak, jak leżąca obejmuje kolumnę na desktopie. Wartość to
+   * wysokość toru po obrocie; szerokość wychodzi z proporcji rysunku
+   * (672/1001), czyli ≈ 111 % okna.
+   */
+  --hero-orbit-width-xs: max(30rem, 200vw);
+
+  /*
+   * Przejście z pasa nagłówka w kadr hero. Gradient wychodzi z koloru
+   * nagłówka (`#0E100E`) i gaśnie do zera, więc krawędź `border-bottom`
+   * nagłówka przestaje być linią styku dwóch obrazów. Wysokość jest większa
+   * na desktopie — tam kadr jest niżej i twardsza krawędź byłaby widoczna.
+   */
+  --hero-scrim-top: linear-gradient(
+    180deg,
+    #0e100e 0%,
+    rgb(14 16 14 / 0.72) 34%,
+    rgb(14 16 14 / 0.28) 66%,
+    rgb(14 16 14 / 0) 100%
+  );
+  --hero-scrim-height: 9rem; /* 144 px */
+  --hero-scrim-height-lg: 14rem; /* 224 px */
+
+  /*
+   * Pion sekcji treściowych. 90 px nie należy do skali odstępów — to rytm
+   * między sekcjami, nie krok wewnątrz komponentu, więc token semantyczny.
+   */
+  --section-padding-y: 5.625rem; /* 90 px */
+
+  /*
+   * Łuna w tle sekcji OurImpact. Szerokość jest większa od sekcji (plama ma
+   * wychodzić poza kolumnę treści), a przesunięcie jest procentem WŁASNEJ
+   * wysokości obrazu — obie wartości odtworzone ze złożenia, patrz
+   * OurImpact.spec.md → „Otwarte pytania".
+   */
+  --impact-glow-width: min(105%, 94.5rem); /* maks. 1512 px */
+  --impact-glow-shift: -4%;
+  /*
+   * Na wąskich ekranach nagłówek stoi NIŻEJ względem szerokości sekcji, więc
+   * łuna skalowana tym samym procentem lądowałaby nad nim. Stąd druga para
+   * wartości, nie jeden wzór na wszystkie szerokości.
+   */
+  --impact-glow-width-narrow: 160%;
+  --impact-glow-shift-narrow: 21%;
+  /* Szerokość, przy której nagłówek łamie się na dwa wiersze jak w makiecie. */
+  --impact-heading-width: 34rem; /* 544 px */
+
+  /*
+   * FAQ. Podział kolumn jest proporcją, nie szerokościami: tekst po lewej ma
+   * rosnąć wolniej niż lista pytań, bo to lista niesie treść.
+   */
+  --faq-columns: minmax(0, 5fr) minmax(0, 7fr);
+  /* Szerokość, przy której akapit pod nagłówkiem łamie się jak w makiecie. */
+  --faq-intro-width: 21rem; /* 336 px */
+  /*
+   * Tło kafla pytania — wartość podana wprost przez klienta. Był tu alias do
+   * `--color-surface-step` (wtedy też #131413), ale ten token należy do
+   * HowWeWork i zmienił wartość na #141414, cicho przesuwając FAQ. Plama
+   * z jednej makiety nie jest tą samą zmienną co plama z drugiej, dopóki nie
+   * powie tego Figma — stąd literał, nie odwołanie.
+   */
+  --faq-panel-bg: #131413;
+  /* Ten sam kafel pod kursorem. Rozjaśnienie o 5 na kanale — ma być czuć, że
+     wiersz jest klikalny, a nie że zmienił kolor. */
+  --faq-panel-bg-hover: #181918;
+  --faq-panel-padding: 1.375rem; /* 22 px — jak `--quote-padding` w TrustedBy */
+  /* Kwadrat pod ikoną. Wymiar kontrolki, nie krok rytmu strony. */
+  --faq-icon-size: 1.75rem; /* 28 px */
+
+  /* Te same dwie szerokości dla HowWeWork — nagłówek łamie się na dwa wiersze,
+     zdanie pod nim na trzy, tak jak w złożeniu. */
+  --steps-heading-width: 38rem; /* 608 px */
+  --steps-lead-width: 30rem; /* 480 px — zdanie łamie się na dwa wiersze jak w złożeniu */
+
+  /*
+   * Pas kroków w HowWeWork. Cztery kafle mają czytać się jak JEDEN zaokrąglony
+   * pas przecięty włosami, więc promień jest przypisany pozycji w pasie, nie
+   * kaflowi: zewnętrzny na skrajnych narożnikach, wewnętrzny na wszystkich
+   * pozostałych.
+   */
+  --step-rail-radius: 1.75rem; /* 28 px — płyta pod kaflami */
+  --step-radius-outer: 1.5rem; /* 24 px */
+  /* Ramka płyty widoczna dookoła kafli. 5 px to nie przypadek: to różnica
+     między promieniem płyty a promieniem kafla — dzięki niej oba łuki są
+     współśrodkowe i narożnik nie „grubieje”. */
+  --step-rail-padding: 5px;
+  --step-radius-inner: 0.375rem; /* 6 px */
+  /* Prześwit płyty między kaflami. Nie należy do skali odstępów — to grubość
+     kreski, nie krok rytmu. */
+  --step-gap: 5px;
+  /*
+   * Odstęp numer → tytuł. To ON, a nie wyrównanie pionowe, trzyma tytuły
+   * czterech kroków na jednej wysokości: numer jest zawsze jednowierszowy,
+   * więc stały odstęp od niego daje ten sam punkt startu w każdym kaflu.
+   */
+  --step-title-offset: 3.75rem; /* 60 px */
+  --step-arrow-size: 2.0625rem; /* 33 px */
+  /* Obwódka strzałki w kolorze tła strony. `box-shadow`, nie `border` —
+     obwódka nie może zjadać 33 px średnicy z makiety. */
+  --step-arrow-ring: 4px;
+
+  /*
+   * Ściana logotypów. Kafel jest kwadratem o stałym boku — to on ustala rytm
+   * pasa, więc nie skaluje się z ekranem; zmienia się tylko liczba widocznych.
+   */
+  --logo-tile-size: 10rem; /* 160 px */
+  /* 2 px robi tu podwójną robotę: odstęp między kaflami I padding płyty, na
+     której leżą kafle razem z opinią. Stąd jedna wartość, nie dwie. */
+  --logo-tile-gap: 2px;
+  /* Ile kafli widać naraz w pasie na desktopie — to ta liczba, a nie szerokość
+     kolumny, ustala szerokość ściany logotypów w makiecie. */
+  --logo-wall-columns: 5;
+  /* Prędkość marquee wyrażona na kafel, nie na tor — dzięki temu dłuższa lista
+     logotypów jedzie tak samo szybko, a nie szybciej. */
+  --marquee-tile-duration: 4s;
+
+  /*
+   * Opinia. 22 px + 2 px płyty = 24 px od krawędzi sekcji — dlatego wartość
+   * wygląda na nietypową. Minimum szerokości trzyma kolumnę czytelną, gdy
+   * ściana logotypów zabiera swoje 5 kafli.
+   */
+  --quote-padding: 1.375rem; /* 22 px */
+  --quote-min-width: 20rem; /* 320 px */
+
+  /*
+   * Siatka bloków treściowych: 6 kolumn na szerokość `container-page`. Tekst
+   * bierze pięć lewych, kafle trzy prawe — dzięki jednej siatce nagłówek,
+   * kafle i przycisk stoją na tych samych liniach pionowych.
+   */
+  --grid-columns: 6;
+  --grid-gap: var(--spacing-3);
+
+  --gradient-heading: linear-gradient(180deg, #fefff1 21.79%, #ffd9d0 100%);
+  /* Szkło strzałki w HowWeWork. Efekt daje sam gradient — `backdrop-filter`
+     z makiety byłby no-opem nad jednolitą płytą, patrz PLAYBOOK P-015. */
+  --gradient-step-arrow: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.06) 0%,
+    rgb(255 255 255 / 0.11) 100%
+  );
+
+  /*
+   * Stopka.
+   *
+   * Logo jest tu WIĘKSZE niż w nagłówku (50 px vs 31 px) — to wymiar
+   * komponentu, nie krok skali, więc token semantyczny.
+   */
+  --footer-logo-height: 3.125rem; /* 50 px */
+  /* Odstęp logo → zdanie pod nim. Podany wprost przez klienta. */
+  --footer-brand-gap: 1.75rem; /* 28 px */
+  /* Szerokość, przy której zdanie łamie się na trzy wiersze jak w makiecie. */
+  --footer-intro-width: 22.5rem; /* 360 px */
+  /*
+   * Wiersz stopki (linki społecznościowe + nota prawna) stoi NIŻEJ niż menu,
+   * bo obie kolumny górnego wiersza mają różną wysokość — odstęp jest
+   * własnością siatki, nie któregokolwiek z bloków.
+   */
+  --footer-row-gap: var(--spacing-7); /* 48 px */
+  /*
+   * Nota prawna ma 15 px — wartość spoza skali `--text-*` i celowo NIE
+   * zaokrąglona do 14 px: skala opisuje rytm strony, a to jest jeden napis
+   * o wielkości podanej wprost.
+   */
+  --footer-legal-size: 0.9375rem; /* 15 px */
+
+  /*
+   * CaseStudies.
+   */
+  /*
+   * Proporcja kafla. Klient opisał go jako kwadrat, ale w złożeniu przy
+   * kolumnie 1192 px kafel ma 590 × 517 px — czyli 8 : 7, nie 1 : 1. Zostaje
+   * wartość ze złożenia (różnica to 73 px wysokości na kafel), do potwierdzenia
+   * przy dostępie do Figmy — patrz CaseStudies.spec.md → „Otwarte pytania".
+   */
+  --case-tile-ratio: 8 / 7;
+  /*
+   * Przeciemnienie pod tytułem kafla. Wysokość jest STAŁA, nie procentem
+   * wysokości kafla: gradient ma zasłonić dokładnie tyle kadru, ile zajmuje
+   * dwuwierszowy tytuł z paddingiem, a to nie skaluje się z obrazkiem.
+   */
+  --case-tile-scrim-height: 13.125rem; /* 210 px */
+  /* Udział kadru, jaki gradient zajmuje na desktopie (210 / 516 px). */
+  --case-tile-scrim-ratio: 41%;
+  --case-tile-scrim: linear-gradient(
+    0deg,
+    #181b18 36.36%,
+    rgb(24 27 24 / 0.75) 64.82%,
+    rgb(24 27 24 / 0) 100%
+  );
+  /*
+   * Tytuł kafla i wiersza listy: 20 px. Wartość spoza skali `--text-*` i celowo
+   * NIE zaokrąglona do 18 ani 22 px — to jeden napis o wielkości podanej
+   * wprost, nie nowy stopień rytmu strony (ta sama zasada co przy
+   * `--footer-legal-size`).
+   */
+  --case-title-size: 1.25rem; /* 20 px */
+  /* Szerokość, przy której tytuł kafla łamie się na dwa wiersze jak w złożeniu. */
+  --case-title-width: 20rem; /* 320 px */
+  /* Kółko strzałki. Wymiar kontrolki, nie krok rytmu strony. */
+  --case-arrow-size: 3rem; /* 48 px */
+  --case-arrow-icon-size: 1.25rem; /* 20 px — viewBox strzałki */
+  /* Strzałka NAD zdjęciem — ciemna szyba, bo tło jest nieprzewidywalne. */
+  --case-arrow-bg-media: rgb(0 0 0 / 0.5);
+  /*
+   * Tło wiersza listy. Ta sama liczba co `--faq-panel-bg`, ale osobny token:
+   * plama z jednej makiety nie jest tą samą zmienną co plama z drugiej, dopóki
+   * nie powie tego Figma (patrz komentarz przy `--faq-panel-bg`).
+   */
+  --case-row-bg: #131413;
+  /* Ten sam wiersz pod kursorem — rozjaśnienie o 5 na kanale, jak w FAQ. */
+  --case-row-bg-hover: #181918;
+  /* Logo w wierszu listy: kwadrat 64 px, promień 10 px, padding wiersza 8 px. */
+  --case-row-logo-size: 4rem; /* 64 px */
+  /* Odstęp logo → tytuł w wierszu. Podany wprost przez klienta. */
+  --case-row-gap: 1.25rem; /* 20 px */
+  /* Maksimum dla logotypu NA kaflu. Loga mają różne proporcje i idą w naturalnym
+     rozmiarze — cap pilnuje tylko, żeby kwadratowy Apimel nie urósł nad resztę. */
+  --case-tile-logo-max-height: 4rem; /* 64 px */
+  --case-tile-logo-max-width: 10rem; /* 160 px */
+
+  /*
+   * AdPlacements.
+   */
+  /*
+   * Kafel. Ta sama liczba co `--faq-panel-bg` i `--case-row-bg`, ale osobny
+   * token: plama z jednej makiety nie jest tą samą zmienną co plama z drugiej,
+   * dopóki nie powie tego Figma (patrz komentarz przy `--faq-panel-bg`).
+   */
+  --placement-tile-bg: #131413;
+  /* Obrys kafla — kolor, nie krycie: podany wprost jako #1B1D1B. Na tle kafla
+     przezroczysta biel dałaby inny odcień. */
+  --placement-tile-border: #1b1d1b;
+  /*
+   * Dolna granica wysokości kafla (504 px ze złożenia). Nie ustala wysokości
+   * wiersza — tę rozciąga siatka, żeby oba kafle w wierszu były równe; ta
+   * wartość trzyma kadr, gdy makieta jest niska.
+   */
+  --placement-tile-min-height: 31.5rem;
+  /*
+   * To samo w jednej kolumnie. Kadr jest tam wąski, więc makieta zajmuje mniej
+   * wysokości — 504 px zostawiałoby pod nią pustą płytę na pół ekranu.
+   */
+  --placement-tile-min-height-narrow: 25rem;
+  /* Szerokość, przy której nagłówek łamie się na dwa wiersze jak w złożeniu. */
+  --placement-heading-width: 22rem; /* 352 px */
+  /*
+   * Podział wiersza: kafel szeroki 8 z 13 kolumn (61,5 %), wąski 5. Liczby są
+   * podziałem SIATKI, nie szerokościami kafli — dzięki temu oba wiersze stoją
+   * na tych samych liniach pionowych, mimo że kolejność jest odwrócona.
+   */
+  --placement-grid-columns: 13;
+  --placement-span-wide: 8;
+  --placement-span-narrow: 5;
+  /*
+   * Makiety są eksportami 2×, więc renderują się w połowie swojej szerokości
+   * w pikselach. Szerokość pliku wchodzi do CSS z danych (`preview.width`),
+   * więc w komponencie nie ma ani jednej szerokości wpisanej z ręki.
+   */
+  --placement-media-scale: 0.5;
+  /*
+   * Wygaszenie łuny przy górnej i dolnej krawędzi kafla. Ten sam gradient
+   * w dwóch kierunkach — plama ma wtapiać się w kafel, a nie kończyć krawędzią.
+   */
+  --placement-scrim-top: linear-gradient(
+    180deg,
+    #131413 0%,
+    rgb(19 20 19 / 0) 45.86%,
+    rgb(19 20 19 / 0) 100%
+  );
+  --placement-scrim-bottom: linear-gradient(
+    0deg,
+    #131413 0%,
+    rgb(19 20 19 / 0) 45.86%,
+    rgb(19 20 19 / 0) 100%
+  );
+  /*
+   * Kwadraty przy tytułach kafli. Kolor jest przypisany POZYCJI w sekcji, nie
+   * treści kafla — dlatego cztery tokeny, a nie pole w danych (spec → „Pola").
+   */
+  --placement-dot-size: 0.5rem; /* 8 px */
+  --placement-dot-1: #ff6200;
+  --placement-dot-2: #f600ff;
+  --placement-dot-3: #00ddff;
+  --placement-dot-4: #00ff26;
+
+  /*
+   * Cta.
+   */
+  /* Ramka płyty: 12 px między krawędzią kadru a wewnętrznym obrysem. */
+  --cta-panel-padding: var(--spacing-3);
+  --cta-panel-radius: var(--radius-lg); /* 16 px */
+  /*
+   * Obrys wewnątrz płyty. Promień 12 px, czyli 16 - 4: łuk NIE jest
+   * współśrodkowy z płytą (ta różnica wynosiłaby 12 px, tyle co padding).
+   * Wartość jest z makiety i zostaje taka, jaka jest — patrz spec.
+   */
+  --cta-frame-radius: 0.75rem; /* 12 px */
+  --cta-frame-border: rgb(255 255 255 / 0.16);
+  /* Odstęp obrysu od treści. Wymiar wnętrza płyty, nie krok rytmu strony. */
+  --cta-frame-padding: 2.5rem; /* 40 px */
+  --cta-frame-padding-narrow: var(--spacing-5); /* 24 px */
+  /* Szerokość, przy której nagłówek łamie się na dwa wiersze jak w złożeniu. */
+  --cta-heading-width: 34rem; /* 544 px */
+  /* Odstęp przycisk → pytanie nad plakietkami. Podany wprost: 42 px. */
+  --cta-benefits-offset: 2.625rem;
+  /*
+   * Plakietka korzyści. Padding jest niesymetryczny (12 px od ikony,
+   * 16 px od tekstu), więc idzie jednym tokenem — rozbicie na dwa sugerowałoby,
+   * że któraś strona jest krokiem skali.
+   */
+  --cta-badge-radius: 3.5625rem; /* 57 px — pigułka, ale wartość jest z makiety */
+  --cta-badge-bg: rgb(50 50 50 / 0.2);
+  --cta-badge-padding: 4px 16px 4px 12px;
+  --cta-badge-gap: 0.625rem; /* 10 px — ikona → tekst */
+  /* Ptaszek. Wymiary są proporcją rysunku (viewBox 13 × 9), nie krokiem skali —
+     dlatego para tokenów, a nie jeden „rozmiar ikony”. */
+  --cta-badge-icon-width: 13px;
+  --cta-badge-icon-height: 9px;
+  /*
+   * Łuna pod płytą. Nie jest obrazem: to jednolita plama rozmyta filtrem,
+   * więc nie ma kadru, którego krawędź trzeba by maskować (patrz P-037).
+   * Wymiary z makiety, przesunięcie w dół dobrane tak, żeby spod płyty
+   * wychodziła sama poświata, a nie kształt.
+   */
+  --cta-glow-width: 45.4375rem; /* 727 px */
+  --cta-glow-height: 11.3125rem; /* 181 px */
+  --cta-glow-blur: 90px;
+  --cta-glow-color: #272827;
+  --cta-glow-shift: 40%;
+
+  /*
+   * WhyChooseUs.
+   */
+  /*
+   * Dwie równe kolumny — pionowa kreska ma stać dokładnie na środku sekcji,
+   * więc podział jest proporcją 1 : 1, a nie szerokościami.
+   */
+  --why-columns: minmax(0, 1fr) minmax(0, 1fr);
+  /*
+   * Odstęp od kresek do treści: 36 px w pionie. Nie należy do skali odstępów —
+   * to grubość „światła” tabeli, nie krok rytmu strony, więc token semantyczny.
+   */
+  --why-padding-y: 2.25rem;
+  /*
+   * Ikony renderują się w STAŁEJ szerokości; wysokość jest `auto`, bo rysunki
+   * mają różną liczbę kropek w pionie (dwa pliki 32 × 32, dwa 29 × 29).
+   */
+  --why-icon-size: 2rem; /* 32 px */
+  /* Szerokości, przy których akapity łamią się jak na zrzucie. */
+  --why-intro-width: 32rem; /* 512 px — zdanie łamie się po „online channels.” jak na zrzucie */
+  --why-item-text-width: 26rem; /* 416 px */
+
+  /*
+   * CustomerReviews.
+   */
+  /*
+   * Box opinii. Wszystkie cztery wartości są podane wprost przez klienta:
+   * szyba o 50 % krycia z rozmyciem tego, co pod nią leży. `backdrop-filter`
+   * NIE jest tu no-opem jak w HowWeWork (P-015) — pod boxem jest kadr ze
+   * zdjęciem, więc rozmycie ma co rozmywać.
+   */
+  --review-card-bg: rgb(23 24 23 / 0.5);
+  --review-card-border: rgb(254 255 241 / 0.05);
+  --review-card-blur: 40px;
+  --review-card-radius: 0.75rem; /* 12 px */
+  --review-card-padding: var(--spacing-5); /* 24 px */
+  /*
+   * Gwiazdki oceny. Pomarańcz, NIE `--color-brand` — czerwień z sygnetu stoi
+   * o dwa wiersze niżej, na kresce przy nazwisku, i to są dwa różne kolory
+   * w jednym boxie.
+   */
+  --review-star-color: #ee8834;
+  /* Wymiary rysunku (viewBox 19 × 18), nie krok skali — stąd para tokenów. */
+  --review-star-width: 19px;
+  --review-star-height: 18px;
+  /* Kreska przy nazwisku. Grubość jest z makiety (`stroke-width: 2px`). */
+  --review-rule-width: 2px;
+  --review-rule-gap: var(--spacing-3);
+  /* Logotyp klienta w rogu boxa: cap wysokości, szerokość naturalna — loga
+     mają różne proporcje (kwadrat Apimel vs pas JMSolar). */
+  --review-logo-max-height: 1.75rem; /* 28 px */
+  --review-logo-max-width: 6rem; /* 96 px */
+
+  /*
+   * Ściana opinii. Wysokość okna jest STAŁA, nie liczona z treści: pas jedzie
+   * w pętli, więc to okno decyduje, ile opinii widać naraz — a nie odwrotnie.
+   */
+  --review-wall-height: 34rem; /* 544 px */
+  --review-wall-height-narrow: 28rem;
+  --review-wall-columns: 3;
+  --review-wall-gap: var(--spacing-5); /* 24 px */
+  /*
+   * Prędkość wyrażona na JEDEN box, nie na tor — dłuższa lista opinii ma
+   * jechać tak samo szybko, a nie szybciej (ta sama zasada co
+   * `--marquee-tile-duration` w TrustedBy).
+   */
+  --review-card-duration: 9s;
+  /*
+   * Wygaszenie góry i dołu ściany. Ten sam gradient w dwóch kierunkach: kadr
+   * ma wtopić się w tło strony, a boxy — wjeżdżać i znikać, zamiast urywać się
+   * na krawędzi okna.
+   */
+  --review-scrim: linear-gradient(180deg, rgb(13 15 13 / 0) 0%, #0d0f0d 100%);
+  /* Ile kadru zajmuje wygaszenie przy krawędzi. Procent, bo okno zmienia
+     wysokość między szerokościami ekranu. */
+  --review-scrim-size: 22%;
+
+  /*
+   * VideoReviews.
+   */
+  /*
+   * Kafel. Makieta podaje 380 × 520 px, ale kafel jest kolumną karuzeli — na
+   * wąskim ekranie musi się zwęzić. Dlatego z tych dwóch liczb zostaje
+   * PROPORCJA, a szerokość jest górnym ograniczeniem, nie wymiarem.
+   */
+  --video-review-card-width: 23.75rem; /* 380 px */
+  --video-review-card-ratio: 19 / 26; /* 380 : 520 */
+  --video-review-card-radius: 1.25rem; /* 20 px */
+  --video-review-card-padding: var(--spacing-2); /* 8 px */
+  /* Płyta kafla. JAŚNIEJSZA od tła strony i ciemniejsza od `--color-surface` —
+     wartość podana wprost przez klienta, nie odcień wyliczony z istniejących
+     (patrz P-039: alias do cudzego tokenu zmienia kolor bez commita tutaj). */
+  --video-review-card-bg: #191a19;
+  --video-review-media-radius: 0.75rem; /* 12 px */
+  /* Odstęp treści OD KRAWĘDZI KADRU — nie od kafla; kafel ma własny padding. */
+  --video-review-media-padding: 0.625rem; /* 10 px */
+
+  /*
+   * Szkło przycisku play i plakietki z nazwiskiem. Jedna wartość dla obu, bo
+   * w makiecie to jeden materiał. `backdrop-filter` NIE jest tu no-opem
+   * (P-015): pod spodem leży klatka wideo, więc rozmycie ma co rozmywać —
+   * ale tło jest krytą częścią tego szkła, nie samym rozmyciem, żeby nazwisko
+   * dało się przeczytać także tam, gdzie filtr nie działa.
+   */
+  --video-review-glass-bg: rgb(13 15 13 / 0.3);
+  --video-review-glass-blur: 30px;
+
+  --video-review-play-size: 4.5rem; /* 72 px */
+  --video-review-play-icon: 1.5rem; /* 24 px */
+  --video-review-name-radius: var(--radius-sm); /* 4 px */
+  --video-review-name-padding: var(--spacing-4); /* 16 px */
+  /* 17 px — wartość spoza skali `--text-*` i celowo do niej NIE dopasowana:
+     to podpis w kafelku, nie stopień rytmu typograficznego strony. */
+  --video-review-name-size: 1.0625rem;
+
+  /*
+   * Kreska paginacji z flarą. Ta sama mechanika co pionowa kreska w WhoWeAre
+   * (`--color-border-hairline` + cień odbijający ją od tła), tylko w poziomie
+   * i sterowana pozycją przewinięcia, nie zegarem.
+   */
+  --video-review-flare-width: 15.25rem; /* 244 px */
+  --video-review-flare-color: var(--color-brand-glow);
+
+  --video-review-arrow-size: 2.25rem; /* 36 px */
+  --video-review-arrow-radius: var(--radius-sm); /* 4 px */
+  --video-review-arrow-bg: #fff;
+  --video-review-arrow-bg-hover: rgb(255 255 255 / 0.8);
+  --video-review-arrow-fg: #0d0f0d;
+  /* Ikona strzałki, której nie da się kliknąć. 40 % krycia jest z makiety —
+     kontrast ~2,6:1, poniżej progu dla kontrolki AKTYWNEJ; WCAG 1.4.11 wyłącza
+     z wymagania kontrolki nieaktywne. Otwarte pytanie w VideoReviews.spec.md. */
+  --video-review-arrow-fg-disabled: rgb(13 15 13 / 0.4);
+
+  /*
+   * Contact.
+   */
+  /*
+   * Nagłówek sekcji: 96 px. NIE `--text-6xl` (94 px, hero) — te dwie liczby
+   * przyszły z dwóch różnych złożeń i dopóki nie powie inaczej Figma, są to
+   * dwie wartości, a nie jedna (ta sama zasada co przy `--color-brand-glow`).
+   */
+  /*
+   * Nagłówek kroku — pytanie pod pasem tabów. 20 px to wartość podana wprost,
+   * spoza skali `--text-*` (16 → 22 px): to jeden napis o zadanej wielkości,
+   * nie nowy stopień rytmu strony (ta sama zasada co `--footer-legal-size`).
+   */
+  --contact-step-heading-size: 1.25rem; /* 20 px */
+
+  --contact-heading-size: 6rem; /* 96 px */
+  --contact-heading-size-md: 4rem; /* 64 px */
+  /* Szerokości, przy których nagłówek łamie się na dwa wiersze, a zdanie pod
+     nim na dwa — jak na zrzucie. */
+  --contact-heading-width: 60rem; /* 960 px — przy 96 px nagłówek łamie się na
+     dwa wiersze jak na zrzucie; polski tekst jest dłuższy od angielskiego */
+  --contact-lead-width: 38rem; /* 608 px */
+
+  /*
+   * Płyta formularza. Szerokość jest WŁASNOŚCIĄ PŁYTY, nie kolumny treści:
+   * nagłówek rozciąga się szerzej, formularz zostaje wąski niezależnie od tego,
+   * ile miejsca daje `container-page`.
+   */
+  --contact-panel-width: 45rem; /* 720 px */
+  --contact-panel-bg: #0e100e;
+  --contact-panel-radius: var(--radius-lg); /* 16 px */
+  --contact-panel-padding: var(--spacing-5); /* 24 px */
+  /*
+   * Dwie warstwy pod płytą, nie trzy. Klient podał obrys 24 px oraz DWA
+   * identyczne rozmyte obrysy 2 px `#FF0043` w `plus-lighter`. Dwie identyczne
+   * warstwy to podwojenie jasności, a nie inny kształt — więc zostaje jedna
+   * z odpowiednim kryciem. Patrz Contact.spec.md → „Otwarte pytania".
+   */
+  --contact-halo-radius: 1.5rem; /* 24 px */
+  --contact-halo-inset: -0.5rem; /* 8 px = (24 - 16) px promienia */
+  --contact-halo-border: rgb(254 255 241 / 0.1);
+  --contact-glow-width: 2px;
+  --contact-glow-blur: 4px;
+  /* Krycie zastępuje drugą kopię warstwy — patrz komentarz wyżej. */
+  --contact-glow-opacity: 0.85;
+
+  /*
+   * Pas kroków. Płyta pod tabami jest CIEMNIEJSZA (#1E1E1E) od kafla
+   * nieaktywnego (#2F2F2F) — stąd dwa tokeny, nie jeden z `opacity`.
+   */
+  --contact-rail-bg: #1e1e1e;
+  --contact-rail-radius: 0.75rem; /* 12 px */
+  --contact-rail-gap: 2px;
+  --contact-tab-radius: 0.75rem; /* 12 px */
+  --contact-tab-padding: var(--spacing-2); /* 8 px */
+  --contact-tab-gap: var(--spacing-3); /* 12 px — ikona → podpis */
+  --contact-tab-icon-size: 1.5rem; /* 24 px */
+  --contact-tab-bg: #2f2f2f;
+  /* DŁUG: ≈ 3,2:1 na `--contact-tab-bg`, poniżej AA dla tekstu — wartość
+     z makiety, otwarte pytanie w Contact.spec.md. */
+  --contact-tab-fg: #aaaba3;
+  --contact-tab-bg-active: linear-gradient(180deg, #212121 0%, #0c0c0c 100%);
+  --contact-tab-border-active: var(--color-brand);
+  --contact-tab-opacity: 0.9;
+
+  /*
+   * Kontrolki (wiersz checkboxa, pole tekstowe). Jedno tło na oba — na zrzucie
+   * są tą samą płytką, różnią się tylko zawartością.
+   */
+  --contact-field-bg: linear-gradient(180deg, #212121 0%, #1a1a1a 100%);
+  /* Ten sam wiersz pod kursorem — rozjaśnienie o kilka na kanale, jak w FAQ. */
+  --contact-field-bg-hover: linear-gradient(180deg, #272727 0%, #202020 100%);
+  --contact-field-border: #333;
+  /* Ten sam obrys pod kursorem — o tyle jaśniejszy, żeby było czuć, że pole
+     jest klikalne, a nie że zmieniło kolor (ta sama zasada co w FAQ). */
+  --contact-field-border-hover: #444;
+  --contact-field-radius: var(--radius-md); /* 8 px */
+  --contact-field-padding: 0.75rem 1rem;
+
+  /*
+   * Pole tekstowe z pływającą etykietą. Wysokość jest STAŁA — to ona, a nie
+   * treść, ustala rytm kroku 2; etykieta wjeżdża w górny padding, więc pudełko
+   * nie zmienia wymiaru między stanami (zero CLS przy kliknięciu).
+   */
+  --contact-field-height: 3.25rem; /* 52 px */
+  /* Górny padding robi miejsce etykiecie w stanie pływającym. */
+  --contact-field-input-padding: 1.375rem 1rem 0.375rem;
+  --contact-field-label-inset: 1rem;
+  /* Przesunięcie etykiety w górę. Wartość jest w px, nie w krokach skali —
+     to odległość między dwiema pozycjami tego samego napisu, nie rytm strony. */
+  --contact-field-label-lift: -1.1875rem; /* 19 px */
+  --contact-field-label-scale: 0.8;
+  /* Podkład pod autouzupełnionym polem. Jednolity kolor, nie gradient tła:
+     przebija się wyłącznie cieniem `inset`, a ten nie przyjmuje gradientu. */
+  --contact-field-autofill: #1e1e1e;
+  /* Kwadrat checkboxa. Wymiar kontrolki, nie krok rytmu strony. */
+  --contact-check-size: 1rem; /* 16 px */
+  --contact-check-radius: var(--radius-sm); /* 4 px */
+
+  /*
+   * Wygaszenie kadru przy górnej i dolnej krawędzi sekcji. Ten sam gradient
+   * użyty w dwóch kierunkach (górny obrócony o 180°) — kadr ma wtapiać się
+   * w tło strony, a nie kończyć widoczną krawędzią. Ta sama mechanika co
+   * `--review-scrim` w CustomerReviews, ale osobny token: tam wygaszany jest
+   * pas opinii, tu zdjęcie tła całej sekcji.
+   */
+  --contact-scrim: linear-gradient(180deg, rgb(13 15 13 / 0) 0%, #0d0f0d 100%);
+  /* Ile wysokości sekcji zajmuje wygaszenie. Procent, nie px: sekcja ma inną
+     wysokość na każdej szerokości ekranu. */
+  --contact-scrim-size: 25%;
+
+  /* Cień taba aktywnego. Wartość z makiety 1:1. */
+  --shadow-contact-tab: 0 2px 5.5px 0 rgb(0 0 0 / 0.45);
+  /* Łuna pola pod fokusem. Ten sam czerwony co obrys, tylko rozlany — pole ma
+     się „zapalić", a nie dostać drugą ramkę. */
+  --shadow-contact-field-focus: 0 0 0 3px rgb(255 0 67 / 0.15);
+
+  /* aliasy `--space-*` wymagane przez AGENT-RULES §4 */
+  --space-0: var(--spacing-0);
+  --space-1: var(--spacing-1);
+  --space-2: var(--spacing-2);
+  --space-3: var(--spacing-3);
+  --space-4: var(--spacing-4);
+  --space-5: var(--spacing-5);
+  --space-6: var(--spacing-6);
+  --space-7: var(--spacing-7);
+  --space-8: var(--spacing-8);
+  --space-9: var(--spacing-9);
+  --space-10: var(--spacing-10);
+}

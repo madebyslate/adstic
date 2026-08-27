@@ -1,0 +1,50 @@
+---
+import { Image } from 'astro:assets'
+import type { MediaImage } from '@repo/shared'
+import { resolveImage, isRemote } from '@/lib/media'
+
+interface Props {
+  image: MediaImage
+  /** Szerokości wariantów. Dobierasz do layoutu, nie „na wszelki wypadek". */
+  widths?: number[]
+  /** Musi odpowiadać realnej szerokości w layoucie, inaczej przeglądarka pobiera za duży plik. */
+  sizes?: string
+  /** Ustaw `true` wyłącznie dla elementu LCP. */
+  priority?: boolean
+  class?: string
+}
+
+const { image, widths, sizes = '100vw', priority = false, class: className } = Astro.props
+
+const src = resolveImage(image)
+
+// Wspólne atrybuty. LCP ładujemy natychmiast i z wysokim priorytetem,
+// wszystko inne leniwie — to jest różnica między 2,4 s a 4 s LCP na 4G.
+const shared = {
+  alt: image.alt,
+  widths,
+  sizes,
+  loading: priority ? ('eager' as const) : ('lazy' as const),
+  decoding: priority ? ('sync' as const) : ('async' as const),
+  fetchpriority: priority ? ('high' as const) : ('auto' as const),
+  // Obrazu nie wyciąga się ze strony przeciągnięciem; CSS-owy odpowiednik
+  // (`-webkit-user-drag`) jest w global.css i nie działa w Firefoksie.
+  draggable: false,
+  class: className,
+}
+---
+
+{
+  /*
+    Dwie gałęzie, bo `<Image>` ma inny kontrakt dla obu źródeł: obraz lokalny ma
+    wymiary w metadanych, zdalny (Payload) musi je dostać jawnie — inaczej nie da
+    się zarezerwować miejsca i CLS wyjeżdża poza budżet.
+  */
+}
+{
+  isRemote(src) ? (
+    <Image src={src} width={image.width} height={image.height} {...shared} />
+  ) : (
+    <Image src={src} format="avif" {...shared} />
+  )
+}

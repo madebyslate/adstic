@@ -1,0 +1,1075 @@
+---
+import type { ContactBlock } from '@repo/shared'
+import Picture from '@/components/ui/Picture.astro'
+
+interface Props {
+  block: ContactBlock
+}
+
+const { block } = Astro.props
+const headingId = 'contact-heading'
+const errorId = 'contact-goals-error'
+
+/*
+ * Kolejność kroków jest tu, a nie w danych: numer i ikona wynikają z POZYCJI
+ * w pasie (ta sama zasada co `--placement-dot-*` w AdPlacements). Fixture nie
+ * może więc opisać kroków 1, 1, 3.
+ */
+const steps = [block.goalsStep, block.detailsStep, block.summaryStep]
+
+/*
+ * Etap 1 nie ma endpointów (AGENT-RULES §1), więc `action` jest puste i wysyłka
+ * zostaje wyłączona. Etap 2 wypełnia pole adresem kolekcji Payloada — i to
+ * jedyna zmiana, jakiej ten blok wtedy wymaga.
+ */
+const canSubmit = Boolean(block.action)
+
+/* Ikony kroków — jedna definicja, trzy referencje. */
+const ICON_IDS = ['contact-icon-store', 'contact-icon-chart', 'contact-icon-calendar']
+---
+
+{/*
+  Wejście sekcji. Grupa trzyma wszystkie animacje w środku na pierwszej klatce,
+  dopóki obserwator w BaseLayout nie uzna, że warto ją odegrać — mechanizm jest
+  opisany przy „W polu widzenia" w global.css.
+*/}
+<section class="contact" aria-labelledby={headingId} data-reveal-group>
+  {/* Kadr z łuną pod całą sekcją. Dekoracja — poza drzewem dostępności. */}
+  <div class="contact__backdrop reveal-fade" style="--reveal-index: 0" aria-hidden="true">
+    <Picture image={block.background} widths={[768, 1440, 2880]} sizes="100vw" />
+  </div>
+
+  {/*
+    Ikony kroków jako `<symbol>` + `<use>`: trzy rysunki, ale każdy stoi
+    w dwóch stanach taba, więc definicja jest jedna, a nie kopiowany inline SVG.
+  */}
+  <svg class="contact__sprite" aria-hidden="true" focusable="false">
+    <symbol id={ICON_IDS[0]} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M15 21V16C15 15.7348 14.8946 15.4804 14.7071 15.2929C14.5196 15.1054 14.2652 15 14 15H10C9.73478 15 9.48043 15.1054 9.29289 15.2929C9.10536 15.4804 9 15.7348 9 16V21"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"></path>
+      <path
+        d="M17.7749 10.31C17.5665 10.1104 17.289 9.99904 17.0004 9.99904C16.7118 9.99904 16.4344 10.1104 16.2259 10.31C15.7609 10.7535 15.143 11.001 14.5004 11.001C13.8578 11.001 13.2399 10.7535 12.7749 10.31C12.5665 10.1107 12.2893 9.99952 12.0009 9.99952C11.7126 9.99952 11.4353 10.1107 11.2269 10.31C10.7619 10.7538 10.1438 11.0014 9.50093 11.0014C8.8581 11.0014 8.23997 10.7538 7.77493 10.31C7.56647 10.1104 7.28902 9.99904 7.00043 9.99904C6.71184 9.99904 6.43439 10.1104 6.22593 10.31C5.77677 10.7386 5.1842 10.9848 4.56356 11.0005C3.94291 11.0163 3.33859 10.8006 2.86823 10.3954C2.39787 9.99015 2.09513 9.42439 2.01891 8.80824C1.9427 8.19209 2.09848 7.56962 2.45593 7.062L5.34493 2.878C5.52824 2.60751 5.77502 2.38605 6.06371 2.233C6.35239 2.07994 6.67418 1.99994 7.00093 2H17.0009C17.3267 1.99988 17.6476 2.07934 17.9357 2.23149C18.2238 2.38364 18.4703 2.60386 18.6539 2.873L21.5489 7.065C21.9065 7.57303 22.062 8.19597 21.9854 8.81244C21.9087 9.42891 21.6052 9.99475 21.1341 10.3997C20.663 10.8046 20.058 11.0197 19.437 11.0029C18.816 10.9861 18.2235 10.7388 17.7749 10.309"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"></path>
+      <path
+        d="M4 10.9502V19.0002C4 19.5306 4.21071 20.0393 4.58579 20.4144C4.96086 20.7895 5.46957 21.0002 6 21.0002H18C18.5304 21.0002 19.0391 20.7895 19.4142 20.4144C19.7893 20.0393 20 19.5306 20 19.0002V10.9502"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"></path>
+    </symbol>
+
+    <symbol id={ICON_IDS[1]} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M3 3V19C3 19.5304 3.21071 20.0391 3.58579 20.4142C3.96086 20.7893 4.46957 21 5 21H21"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"></path>
+      <path
+        d="M19 9L14 14L10 10L7 13"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"></path>
+    </symbol>
+
+    <symbol id={ICON_IDS[2]} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M8 2V5"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"></path>
+      <path
+        d="M16 2V5"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"></path>
+      <path
+        d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3Z"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"></path>
+      <path
+        d="M3 9H21"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"></path>
+    </symbol>
+  </svg>
+
+  <div class="container-page contact__intro">
+    {/* Etykieta jest podpisem — nagłówkiem sekcji jest zdanie pod nią. */}
+    <p class="contact__eyebrow reveal" style="--reveal-index: 1">{block.eyebrow}</p>
+    <h2 id={headingId} class="contact__heading reveal" style="--reveal-index: 2">{block.heading}</h2>
+    <p class="contact__lead reveal" style="--reveal-index: 3">{block.description}</p>
+  </div>
+
+  <div class="container-page">
+    {/*
+      Scena, nie sama płyta: obrys 24 px i czerwona łuna leżą POZA płytą, więc
+      nie mogą być jej dziećmi — płyta jest przycięta własnym promieniem.
+    */}
+    <div class="contact__stage reveal" style="--reveal-index: 4">
+      <div class="contact__halo" aria-hidden="true"></div>
+      <div class="contact__glow" aria-hidden="true"></div>
+
+      <form
+        class="contact__panel"
+        data-contact-form
+        method="post"
+        action={block.action || undefined}
+      >
+        {/*
+          Pas kroków to `<ol>` z przyciskami, a NIE `role="tablist"`: to kreator
+          formularza, więc strzałki nie mają po nim nawigować. Przyciski są
+          `disabled` w HTML — odblokowuje je dopiero skrypt, bo bez JS nie ma
+          czego przełączać (progressive enhancement, AGENT-RULES §6).
+        */}
+        <ol class="contact__rail">
+          {
+            steps.map((step, index) => (
+              <li class="contact__rail-item">
+                <button
+                  type="button"
+                  class="tab"
+                  data-step-tab={index}
+                  disabled
+                  aria-current={index === 0 ? 'step' : 'false'}
+                >
+                  <svg class="tab__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <use href={`#${ICON_IDS[index]}`} />
+                  </svg>
+                  <span class="tab__label">{step.label}</span>
+                </button>
+              </li>
+            ))
+          }
+        </ol>
+
+        {/* ── Krok 1: cele ─────────────────────────────────────────────── */}
+        <fieldset class="step" data-step="0" aria-describedby={errorId}>
+          {/*
+            `<legend>`, nie `<h3>`: to pytanie do grupy pól, a nie nagłówek
+            dokumentu — nagłówkiem sekcji zostaje `<h2>` wyżej.
+          */}
+          <legend class="step__heading" data-step-heading tabindex="-1">
+            {block.goalsStep.heading}
+          </legend>
+          <p class="step__description">{block.goalsStep.description}</p>
+
+          {/*
+            Komunikat jest w DOM od początku i tylko chowany — czytnik ekranu
+            musi mieć region, do którego treść wjedzie, zanim się pojawi.
+          */}
+          <p class="step__error" id={errorId} role="status" hidden>
+            {block.goalsStep.errorMessage}
+          </p>
+
+          <ul class="options">
+            {
+              block.goalsStep.options.map((option) => (
+                <li>
+                  <label class="option">
+                    <input class="option__input" type="checkbox" name="goals" value={option} data-goal />
+                    <span class="option__box" aria-hidden="true">
+                      <svg class="option__check" viewBox="0 0 13 9" fill="none" focusable="false">
+                        <path
+                          d="M11.4167 0.75L4.08333 8.08333L0.75 4.75"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </span>
+                    <span class="option__label">{option}</span>
+                  </label>
+                </li>
+              ))
+            }
+          </ul>
+        </fieldset>
+
+        {/* ── Krok 2: dane kontaktowe ──────────────────────────────────── */}
+        <div class="step" data-step="1">
+          <p class="step__heading" data-step-heading tabindex="-1">{block.detailsStep.heading}</p>
+          <p class="step__description">{block.detailsStep.description}</p>
+
+          <div class="fields">
+            {
+              block.detailsStep.fields.map((field) => (
+                <label class="field">
+                  {/*
+                    Kolejność jest tu kontraktem, nie stylem: etykieta stoi PO
+                    polu, bo pływa na `:placeholder-shown` sąsiada, a CSS nie
+                    umie sięgnąć wstecz. `placeholder=" "` (spacja, nie pusty
+                    string) jest tym, co w ogóle włącza ten stan.
+                  */}
+                  <input
+                    class="field__input"
+                    type={field.type}
+                    name={field.name}
+                    placeholder=" "
+                    required={field.required}
+                    autocomplete={field.autocomplete}
+                    data-field-label={field.label}
+                  />
+                  <span class="field__label">{field.label}</span>
+                </label>
+              ))
+            }
+          </div>
+        </div>
+
+        {/* ── Krok 3: przegląd, zgoda, wysyłka ─────────────────────────── */}
+        <div class="step" data-step="2">
+          <p class="step__heading" data-step-heading tabindex="-1">{block.summaryStep.heading}</p>
+          <p class="step__description">{block.summaryStep.description}</p>
+
+          {/*
+            Przegląd wypełnia skrypt z tego, co użytkownik zaznaczył i wpisał.
+            Bez JS nie ma czego streszczać — stąd `hidden` w HTML, zdejmowane
+            przy starcie skryptu.
+          */}
+          <div class="summary" data-summary hidden>
+            <dl class="summary__list">
+              <div class="summary__row">
+                <dt class="summary__term">{block.summaryStep.goalsLabel}</dt>
+                <dd class="summary__value" data-summary-goals>{block.summaryStep.emptyLabel}</dd>
+              </div>
+              <div class="summary__row">
+                <dt class="summary__term">{block.summaryStep.detailsLabel}</dt>
+                <dd class="summary__value" data-summary-details>{block.summaryStep.emptyLabel}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <label class="consent">
+            <input class="option__input" type="checkbox" name="consent" required />
+            <span class="option__box" aria-hidden="true">
+              <svg class="option__check" viewBox="0 0 13 9" fill="none" focusable="false">
+                <path
+                  d="M11.4167 0.75L4.08333 8.08333L0.75 4.75"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"></path>
+              </svg>
+            </span>
+            {/*
+              Jedyna treść bloku ze znacznikiem — zgoda niesie link do Polityki
+              Prywatności, więc jest `RichText`, a nie zwykłym stringiem.
+            */}
+            <span class="consent__label" set:html={block.summaryStep.consent} />
+          </label>
+        </div>
+
+        <div class="contact__actions">
+          {/*
+            „Wstecz" i „Dalej" mają sens wyłącznie przy działającym JS — bez
+            niego wszystkie kroki są widoczne naraz, więc startują ukryte
+            i odsłania je skrypt. „Wyślij" jest widoczny zawsze.
+          */}
+          <button type="button" class="button button--ghost btn-wipe" data-back hidden>
+            {block.backLabel}
+          </button>
+
+          <button type="button" class="button button--primary btn-wipe" data-next hidden>
+            {block.nextLabel}
+          </button>
+
+          <button type="submit" class="button button--primary btn-wipe" data-submit disabled={!canSubmit}>
+            {block.summaryStep.submitLabel}
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</section>
+
+<script>
+  /*
+   * Kreator formularza. Jedyny JS w tym bloku i jedyny na stronie głównej poza
+   * hero — uzasadnienie i odrzucone alternatywy w Contact.spec.md → „Budżet".
+   *
+   * Kontrakt z HTML-em: bez tego skryptu formularz działa jako jedna długa
+   * lista pól z natywną walidacją. Skrypt tylko ZWĘŻA to do jednego kroku
+   * naraz, więc awaria ładowania nie zabiera funkcji, a wygodę.
+   */
+  type Nav = HTMLButtonElement
+
+  function setupForm(form: HTMLFormElement) {
+    const tabs = Array.from(form.querySelectorAll<HTMLButtonElement>('[data-step-tab]'))
+    const panels = Array.from(form.querySelectorAll<HTMLElement>('[data-step]'))
+    const next = form.querySelector<Nav>('[data-next]')
+    const back = form.querySelector<Nav>('[data-back]')
+    const submit = form.querySelector<Nav>('[data-submit]')
+    const error = form.querySelector<HTMLElement>('#contact-goals-error')
+    const summary = form.querySelector<HTMLElement>('[data-summary]')
+    const summaryGoals = form.querySelector<HTMLElement>('[data-summary-goals]')
+    const summaryDetails = form.querySelector<HTMLElement>('[data-summary-details]')
+
+    if (!next || !back || !submit || panels.length === 0) return
+
+    const nav = { next, back, submit }
+    const last = panels.length - 1
+    let current = 0
+    /* Najdalszy odwiedzony krok — do niego (i tylko do niego) wolno skoczyć. */
+    let reached = 0
+
+    /*
+     * Funkcje jako `const`, nie deklaracje: deklaracja jest wyciągana na górę
+     * zakresu, więc TypeScript nie może w niej zaufać zawężeniu z `if` wyżej.
+     * Kolejność definicji jest tu więc częścią kontraktu, nie stylem.
+     */
+    const validate = (index: number) => {
+      if (index === 0) {
+        const chosen = form.querySelectorAll('[data-goal]:checked').length > 0
+        if (error) error.hidden = chosen
+        return chosen
+      }
+
+      const panel = panels[index]
+      if (!panel) return true
+
+      const inputs = Array.from(panel.querySelectorAll<HTMLInputElement>('input'))
+      const invalid = inputs.find((input) => !input.checkValidity())
+      if (invalid) {
+        invalid.reportValidity()
+        return false
+      }
+      return true
+    }
+
+    const fillSummary = () => {
+      if (!summaryGoals || !summaryDetails) return
+
+      /* Teksty „nie podano" przychodzą z fixture'a — zapamiętujemy je przy
+         pierwszym przebiegu, zanim je nadpiszemy odpowiedziami. */
+      summaryGoals.dataset.empty ??= summaryGoals.textContent ?? ''
+      summaryDetails.dataset.empty ??= summaryDetails.textContent ?? ''
+
+      const goals = Array.from(form.querySelectorAll<HTMLInputElement>('[data-goal]:checked')).map(
+        (input) => input.value,
+      )
+      summaryGoals.textContent =
+        goals.length > 0 ? goals.join(', ') : (summaryGoals.dataset.empty ?? '')
+
+      const details = Array.from(form.querySelectorAll<HTMLInputElement>('[data-field-label]'))
+        .filter((input) => input.value.trim() !== '')
+        .map((input) => `${input.dataset.fieldLabel}: ${input.value.trim()}`)
+      summaryDetails.textContent =
+        details.length > 0 ? details.join(' · ') : (summaryDetails.dataset.empty ?? '')
+    }
+
+    const show = (index: number, moveFocus: boolean) => {
+      current = Math.min(Math.max(index, 0), last)
+      reached = Math.max(reached, current)
+
+      panels.forEach((panel, position) => {
+        panel.hidden = position !== current
+      })
+      tabs.forEach((tab, position) => {
+        tab.setAttribute('aria-current', position === current ? 'step' : 'false')
+        tab.disabled = position > reached
+      })
+
+      nav.back.hidden = current === 0
+      nav.next.hidden = current === last
+      nav.submit.hidden = current !== last
+
+      if (current === last) fillSummary()
+
+      if (!moveFocus) return
+      /*
+       * Fokus na nagłówek kroku, nie na pierwsze pole: czytnik ekranu ma
+       * najpierw usłyszeć, GDZIE jest, a dopiero potem co ma wypełnić.
+       */
+      panels[current]?.querySelector<HTMLElement>('[data-step-heading]')?.focus()
+    }
+
+    if (summary) summary.hidden = false
+
+    tabs.forEach((tab, index) => {
+      tab.disabled = index > reached
+      tab.addEventListener('click', () => {
+        if (index <= reached) show(index, true)
+      })
+    })
+
+    nav.next.addEventListener('click', () => {
+      if (validate(current)) show(current + 1, true)
+    })
+    nav.back.addEventListener('click', () => show(current - 1, true))
+
+    /*
+     * Pola wymagane siedzą w krokach ukrytych atrybutem `hidden`, a takich
+     * przeglądarka nie potrafi sfokusować przy natywnej walidacji („An invalid
+     * form control is not focusable"). Dlatego przy wysyłce sami wracamy do
+     * kroku z pierwszym niepoprawnym polem.
+     */
+    form.addEventListener('submit', (event) => {
+      const invalid = form.querySelector<HTMLInputElement>('input:invalid')
+      if (!invalid) return
+
+      event.preventDefault()
+      const panel = invalid.closest<HTMLElement>('[data-step]')
+      const index = panel ? panels.indexOf(panel) : -1
+      if (index >= 0) show(index, true)
+      invalid.reportValidity()
+    })
+
+    show(0, false)
+  }
+
+  document.querySelectorAll<HTMLFormElement>('[data-contact-form]').forEach(setupForm)
+</script>
+
+<style>
+  .contact {
+    position: relative;
+    /*
+      Izolacja jest tu warunkiem POPRAWNOŚCI, nie porządku: czerwona łuna używa
+      `mix-blend-mode`, więc musi mieć zdefiniowaną grupę, z którą się miesza.
+      Bez tego zlewa się z całą stroną, a nie z kadrem tej sekcji (P-037).
+    */
+    isolation: isolate;
+    overflow: hidden;
+    padding-block: var(--section-padding-y);
+  }
+
+  /* Definicja `<symbol>` nie ma nic rysować — zabieramy jej miejsce w layoucie. */
+  .contact__sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+  }
+
+  .contact__backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /*
+    Wygaszenie kadru u góry i u dołu. Oba pasy są dziećmi kadru, nie sekcji:
+    dzięki temu malują się NAD zdjęciem i pod treścią, bez dokładania warstwie
+    tła własnego `z-index`.
+  */
+  .contact__backdrop::before,
+  .contact__backdrop::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    height: var(--contact-scrim-size);
+    background: var(--contact-scrim);
+    pointer-events: none;
+  }
+
+  /* Górny pas to ten sam gradient odwrócony — tło strony u góry, przezroczystość niżej. */
+  .contact__backdrop::before {
+    inset-block-start: 0;
+    rotate: 180deg;
+  }
+
+  .contact__backdrop::after {
+    inset-block-end: 0;
+  }
+
+  /* PUŁAPKA (PLAYBOOK P-011): `<img>` z Picture.astro nie ma `data-astro-cid-*`
+     tego bloku — selektor musi iść przez rodzica i `:global()`. */
+  .contact__backdrop :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .contact__intro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: var(--space-7);
+    text-align: center;
+  }
+
+  .contact__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-4);
+    color: var(--color-fg);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-wide);
+    line-height: var(--leading-tight);
+    text-transform: uppercase;
+  }
+
+  .contact__eyebrow::before {
+    content: '';
+    width: var(--space-1);
+    height: var(--space-1);
+    background-color: var(--color-brand);
+  }
+
+  .contact__heading {
+    max-width: var(--contact-heading-width);
+    margin: 0;
+    /* 96 px dotyczy desktopu — na 390 px zostawiałoby jedno słowo w wierszu. */
+    font-size: var(--text-4xl);
+    line-height: var(--leading-snug);
+    /*
+      Gradient malowany PRZEZ litery. `color` zostaje kremem, a nie
+      `transparent`: gdy przeglądarka nie zna `background-clip: text`
+      (albo tryb wysokiego kontrastu go wyłącza), tekst dalej jest widoczny.
+    */
+    color: var(--color-fg);
+    background-image: var(--gradient-heading);
+    background-clip: text;
+    -webkit-background-clip: text;
+  }
+
+  @supports (background-clip: text) or (-webkit-background-clip: text) {
+    .contact__heading {
+      -webkit-text-fill-color: transparent;
+    }
+  }
+
+  .contact__lead {
+    max-width: var(--contact-lead-width);
+    margin: var(--space-4) 0 0;
+    color: var(--color-fg-muted);
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+  }
+
+  .contact__stage {
+    position: relative;
+    width: 100%;
+    max-width: var(--contact-panel-width);
+    margin-inline: auto;
+  }
+
+  /*
+    Obrys 24 px dookoła płyty. Osobny element, a nie `outline` płyty: łuk ma
+    inny promień niż płyta (24 vs 16 px), więc musi mieć własne pudełko.
+  */
+  .contact__halo {
+    position: absolute;
+    inset: var(--contact-halo-inset);
+    border: 1px solid var(--contact-halo-border);
+    border-radius: var(--contact-halo-radius);
+    pointer-events: none;
+  }
+
+  /*
+    Czerwone światło pod krawędzią płyty. Rozmyty obrys, nie cień: `box-shadow`
+    nie da się rozmyć asymetrycznie tak, żeby świecił NA ZEWNĄTRZ i do środka
+    jednocześnie. `plus-lighter` dodaje światło do kadru pod spodem — działa
+    tylko dzięki `isolation` na sekcji.
+  */
+  .contact__glow {
+    position: absolute;
+    inset: 0;
+    border: var(--contact-glow-width) solid var(--color-brand);
+    border-radius: var(--contact-panel-radius);
+    opacity: var(--contact-glow-opacity);
+    filter: blur(var(--contact-glow-blur));
+    mix-blend-mode: plus-lighter;
+    pointer-events: none;
+  }
+
+  .contact__panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    padding: var(--contact-panel-padding);
+    border-radius: var(--contact-panel-radius);
+    background-color: var(--contact-panel-bg);
+  }
+
+  /* ── Pas kroków ───────────────────────────────────────────────────────── */
+
+  .contact__rail {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--contact-rail-gap);
+    margin: 0;
+    padding: var(--contact-rail-gap);
+    border-radius: var(--contact-rail-radius);
+    background-color: var(--contact-rail-bg);
+    list-style: none;
+    opacity: var(--contact-tab-opacity);
+  }
+
+  .contact__rail-item {
+    display: flex;
+    min-width: 0;
+  }
+
+  .tab {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--contact-tab-gap);
+    min-width: 0;
+    padding: var(--contact-tab-padding);
+    border: 1px solid transparent;
+    border-radius: var(--contact-tab-radius);
+    background-color: var(--contact-tab-bg);
+    color: var(--contact-tab-fg);
+    font: inherit;
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--leading-tight);
+    text-align: start;
+    transition:
+      background-color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      color var(--duration-fast) var(--ease-standard);
+  }
+
+  /* Krok odwiedzony wraca kliknięciem — nieodwiedzony jest `disabled`. */
+  .tab:not(:disabled) {
+    cursor: pointer;
+  }
+
+  .tab[aria-current='step'] {
+    border-color: var(--contact-tab-border-active);
+    background: var(--contact-tab-bg-active);
+    box-shadow: var(--shadow-contact-tab);
+    color: var(--color-fg);
+  }
+
+  .tab__icon {
+    flex: none;
+    width: var(--contact-tab-icon-size);
+    height: var(--contact-tab-icon-size);
+  }
+
+  .tab__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── Krok ─────────────────────────────────────────────────────────────── */
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    text-align: center;
+  }
+
+  /* `hidden` musi wygrać z `display: flex` — stąd selektor z klasą, nie sam atrybut. */
+  .step[hidden] {
+    display: none;
+  }
+
+  .step__heading {
+    padding: 0;
+    color: var(--color-fg);
+    font-size: var(--contact-step-heading-size);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-snug);
+  }
+
+  .step__description {
+    margin: var(--space-1) 0 0;
+    color: var(--color-fg-faint);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+  }
+
+  .step__error {
+    margin: var(--space-3) 0 0;
+    color: var(--color-brand-glow);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+  }
+
+  .step__error[hidden] {
+    display: none;
+  }
+
+  /* ── Kontrolki ────────────────────────────────────────────────────────── */
+
+  .options,
+  .fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    width: 100%;
+    margin: var(--space-6) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .option,
+  .consent {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--contact-field-padding);
+    border: 1px solid var(--contact-field-border);
+    border-radius: var(--contact-field-radius);
+    background: var(--contact-field-bg);
+    color: var(--color-fg);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    text-align: start;
+    transition:
+      background var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard);
+  }
+
+  .option,
+  .consent {
+    cursor: pointer;
+  }
+
+  .option:hover,
+  .consent:hover {
+    background: var(--contact-field-bg-hover);
+  }
+
+  .option:has(.option__input:checked),
+  .consent:has(.option__input:checked) {
+    border-color: var(--color-brand);
+  }
+
+  /*
+    Natywny checkbox zostaje w DOM i przyjmuje fokus — znika tylko z widoku,
+    a jego rolę wizualną przejmuje kwadrat obok. Bez tego traci się klawiaturę
+    i wysyłkę wartości.
+  */
+  .option__input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .option__box {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: var(--contact-check-size);
+    height: var(--contact-check-size);
+    border: 1px solid var(--contact-field-border);
+    border-radius: var(--contact-check-radius);
+  }
+
+  .option__check {
+    width: var(--cta-badge-icon-width);
+    height: var(--cta-badge-icon-height);
+    color: var(--color-fg);
+    opacity: 0;
+    transition: opacity var(--duration-fast) var(--ease-standard);
+  }
+
+  .option__input:checked ~ .option__box {
+    border-color: var(--color-brand);
+    background-color: var(--color-brand);
+  }
+
+  .option__input:checked ~ .option__box .option__check {
+    opacity: 1;
+  }
+
+  /* Fokus jest na ukrytym `<input>`, więc obrys rysuje otaczająca etykieta. */
+  .option:has(.option__input:focus-visible),
+  .consent:has(.option__input:focus-visible) {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .option__label,
+  .consent__label {
+    min-width: 0;
+  }
+
+  /*
+    `width: 100%` jest tu wymogiem, nie ozdobą: `.step` układa dzieci w kolumnie
+    z `align-items: center`, więc element bez podanej szerokości kurczy się do
+    treści — a wiersz zgody stoi tuż pod przeglądem, który ma 100 %, i każda
+    różnica jest natychmiast widoczna jako przesunięta krawędź.
+  */
+  .consent {
+    align-items: start;
+    width: 100%;
+    margin-top: var(--space-5);
+    font-size: var(--text-sm);
+    color: var(--color-fg-muted);
+  }
+
+  .consent__label :global(a) {
+    color: var(--color-fg);
+  }
+
+  /*
+    Pole z pływającą etykietą. Etykieta NAD polem kosztowała 64 px wysokości
+    przy 16 px treści — cztery takie pola robiły z kroku 2 ścianę. Tu etykieta
+    zaczyna jako placeholder i odjeżdża w górę, więc jedno pudełko niesie oba
+    stany i wysokość spada do 52 px.
+  */
+  .field {
+    position: relative;
+    display: block;
+    height: var(--contact-field-height);
+    border: 1px solid var(--contact-field-border);
+    border-radius: var(--contact-field-radius);
+    background: var(--contact-field-bg);
+    transition: border-color var(--duration-base) var(--ease-standard);
+  }
+
+  .field:hover {
+    border-color: var(--contact-field-border-hover);
+  }
+
+  /*
+    Czerwony pierścień na focusie. Osobna warstwa z animowanym `opacity`,
+    a nie `box-shadow` przechodzący z przezroczystego — cień animuje się na
+    głównym wątku, `opacity` na kompozytorze (AGENT-RULES §6).
+  */
+  .field::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border: 1px solid var(--color-brand);
+    border-radius: inherit;
+    box-shadow: var(--shadow-contact-field-focus);
+    opacity: 0;
+    transition: opacity var(--duration-base) var(--ease-standard);
+    pointer-events: none;
+  }
+
+  .field:focus-within::after {
+    opacity: 1;
+  }
+
+  .field__input {
+    width: 100%;
+    height: 100%;
+    /* Górny padding robi miejsce etykiecie, która na focusie tam wjeżdża. */
+    padding: var(--contact-field-input-padding);
+    border: 0;
+    background: none;
+    color: var(--color-fg);
+    caret-color: var(--color-brand);
+    font: inherit;
+    font-size: var(--text-base);
+    line-height: var(--leading-tight);
+  }
+
+  /* Obrys focusa rysuje `::after`, nie przeglądarka — inaczej ramka jest podwójna. */
+  .field__input:focus-visible {
+    outline: none;
+  }
+
+  /*
+    Placeholder istnieje wyłącznie po to, żeby `:placeholder-shown` miało czym
+    być — widoczna jest etykieta, nie on.
+  */
+  .field__input::placeholder {
+    color: transparent;
+  }
+
+  /*
+    Chrome maluje autouzupełnione pole na jasno i ignoruje `background`.
+    Przebija to tylko cień `inset` — stąd ta reguła, a nie `background-color`.
+  */
+  .field__input:autofill {
+    box-shadow: inset 0 0 0 100vmax var(--contact-field-autofill);
+    -webkit-text-fill-color: var(--color-fg);
+  }
+
+  .field__label {
+    position: absolute;
+    inset-inline-start: var(--contact-field-label-inset);
+    inset-block-start: 50%;
+    /* Punkt zaczepienia w lewym górnym rogu — inaczej zmniejszona etykieta
+       odpłynęłaby od krawędzi pola. */
+    transform-origin: left top;
+    translate: 0 -50%;
+    color: var(--color-fg-faint);
+    font-size: var(--text-base);
+    line-height: var(--leading-tight);
+    /* `translate` i `scale` jako osobne właściwości, nie `transform`: dzięki
+       temu stan pływający nadpisuje samo przesunięcie, bez powtarzania skali. */
+    transition:
+      translate var(--duration-base) var(--ease-standard),
+      scale var(--duration-base) var(--ease-standard),
+      color var(--duration-base) var(--ease-standard);
+    pointer-events: none;
+  }
+
+  /*
+    Dwa warunki, nie jeden: pole sfokusowane (etykieta ustępuje miejsca kursorowi)
+    ORAZ pole wypełnione (etykieta musi zostać u góry po odejściu fokusa).
+  */
+  .field__input:focus + .field__label,
+  .field__input:not(:placeholder-shown) + .field__label {
+    translate: 0 var(--contact-field-label-lift);
+    scale: var(--contact-field-label-scale);
+  }
+
+  .field__input:focus + .field__label {
+    color: var(--color-fg);
+  }
+
+  /* ── Przegląd (krok 3) ────────────────────────────────────────────────── */
+
+  .summary {
+    width: 100%;
+    margin-top: var(--space-6);
+    padding: var(--contact-field-padding);
+    border: 1px solid var(--contact-field-border);
+    border-radius: var(--contact-field-radius);
+    background: var(--contact-field-bg);
+    text-align: start;
+  }
+
+  .summary[hidden] {
+    display: none;
+  }
+
+  .summary__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin: 0;
+  }
+
+  .summary__row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .summary__term {
+    color: var(--color-fg-faint);
+    font-size: var(--text-xs);
+    line-height: var(--leading-normal);
+  }
+
+  .summary__value {
+    margin: 0;
+    color: var(--color-fg);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+  }
+
+  /* ── Akcje ────────────────────────────────────────────────────────────── */
+
+  .contact__actions {
+    display: flex;
+    gap: var(--space-3);
+  }
+
+  .button {
+    flex: 1;
+    padding: var(--control-padding-y) var(--control-padding-x);
+    border: 1px solid transparent;
+    border-radius: var(--radius-full);
+    font: inherit;
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-tight);
+    cursor: pointer;
+  }
+
+  .button[hidden] {
+    display: none;
+  }
+
+  .button--primary {
+    background-color: var(--color-accent);
+    box-shadow: var(--shadow-button);
+    color: var(--color-accent-fg);
+  }
+
+  .button--ghost {
+    flex: none;
+    border-color: var(--color-border);
+    background-color: var(--color-overlay);
+    color: var(--color-fg);
+  }
+
+  /*
+    Przycisk wyłączony nie zaprasza — kłąb hoveru ma się nie pojawić mimo klasy
+    `.btn-wipe`, a nie tylko zostać przygaszony razem z etykietą.
+  */
+  .button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .button:disabled::before {
+    content: none;
+  }
+
+  .button:disabled:hover {
+    color: inherit;
+  }
+
+  @media (min-width: 768px) {
+    .contact__heading {
+      font-size: var(--contact-heading-size-md);
+    }
+
+    .contact__panel {
+      padding: var(--space-5);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .contact__heading {
+      font-size: var(--contact-heading-size);
+    }
+  }
+
+  /*
+    Poniżej 768 px podpisy kroków nie mieszczą się obok ikony bez łamania pasa
+    na trzy wiersze. Zostaje sama ikona wyśrodkowana; podpis dalej jest w DOM
+    dla czytników ekranu.
+  */
+  @media (max-width: 767px) {
+    .tab {
+      justify-content: center;
+    }
+
+    .tab__label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+  }
+</style>

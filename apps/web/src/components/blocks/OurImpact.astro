@@ -1,0 +1,156 @@
+---
+import type { OurImpactBlock } from '@repo/shared'
+import Picture from '@/components/ui/Picture.astro'
+
+interface Props {
+  block: OurImpactBlock
+}
+
+const { block } = Astro.props
+const headingId = 'our-impact-heading'
+---
+
+{/*
+  Wejście sekcji. Grupa trzyma wszystkie animacje w środku na pierwszej klatce,
+  dopóki obserwator w BaseLayout nie uzna, że warto ją odegrać — mechanizm jest
+  opisany przy „W polu widzenia" w global.css.
+*/}
+<section class="impact" aria-labelledby={headingId} data-reveal-group>
+  {/*
+    Łuna. Kadr jest czarnym prostokątem z czerwoną plamą w środku — wtapia się
+    przez maskę, która wycina samą plamę (uzasadnienie w spec.md).
+  */}
+  <div class="impact__glow reveal-fade" style="--reveal-index: 0" aria-hidden="true">
+    <Picture
+      image={block.glow}
+      widths={[768, 1440, 1512]}
+      sizes="(min-width: 768px) min(105vw, 1512px), 160vw"
+    />
+  </div>
+
+  <div class="container-page impact__content">
+    <p class="impact__eyebrow reveal" style="--reveal-index: 1">{block.eyebrow}</p>
+
+    {/* Etykieta wyżej jest podpisem, nagłówkiem sekcji jest to zdanie. */}
+    <h2 id={headingId} class="impact__heading reveal" style="--reveal-index: 2">{block.heading}</h2>
+
+    {/*
+      Zrzut panelu nie dostaje obrysu ani zaokrągleń z CSS — ramka i wtopienie
+      dolnych kafli są wypalone w pliku (PNG z kanałem alfa).
+    */}
+    <div class="impact__screen scroll-settle">
+      <Picture
+        image={block.screenshot}
+        widths={[768, 1192, 1739]}
+        sizes="(min-width: 1280px) 1192px, 100vw"
+      />
+    </div>
+  </div>
+</section>
+
+<style>
+  .impact {
+    position: relative;
+    /*
+      Sekcja maluje własne tło, a `isolation` domyka grupę kompozycji: ujemny
+      `z-index` łuny leży nad tym tłem tylko wewnątrz tej grupy. Bez izolacji
+      łuna wypada do stackingu strony, czyli POD tło malowane przez sekcję.
+    */
+    isolation: isolate;
+    overflow: hidden;
+    background-color: var(--color-bg);
+    padding-block: var(--section-padding-y);
+  }
+
+  .impact__glow {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 50%;
+    z-index: -1;
+    width: var(--impact-glow-width-narrow);
+    /* Procent w `translate` liczy się od WŁASNEJ wysokości — dzięki temu
+       łuna trzyma się nagłówka, a nie górnej krawędzi sekcji. */
+    translate: -50% var(--impact-glow-shift-narrow);
+    /*
+      Kadr JPG jest prostokątem czerni ciemniejszej niż tło strony (~#050505
+      vs #0D0F0D), więc każda jego krawędź jest widocznym odcięciem. Maska
+      wycina z pliku samą plamę i wygasza ją we wszystkie strony, zanim
+      krawędź zdąży się pojawić — dlatego elipsa, nie gradient pionowy.
+      Maska jest kształtem wygaszenia, nie wartością wizualną; nie ma dla niej
+      tokenu tak samo jak nie ma go dla `object-fit`.
+    */
+    mask-image: radial-gradient(60% 42% at 50% 30%, #000 30%, rgb(0 0 0 / 0.35) 62%, transparent 100%);
+    pointer-events: none;
+  }
+
+  /* PUŁAPKA (PLAYBOOK P-011): `<img>` z Picture.astro nie ma `data-astro-cid-*`
+     tego bloku — selektor musi iść przez rodzica i `:global()`. */
+  .impact__glow :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .impact__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .impact__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-5);
+    color: var(--color-fg);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-wide);
+    line-height: var(--leading-tight);
+    text-transform: uppercase;
+  }
+
+  .impact__eyebrow::before {
+    content: '';
+    width: var(--space-1);
+    height: var(--space-1);
+    background-color: var(--color-brand);
+  }
+
+  .impact__heading {
+    max-width: var(--impact-heading-width);
+    margin: 0 0 var(--space-7);
+    color: var(--color-fg);
+    font-family: var(--font-heading);
+    /* 48 px dotyczy desktopu — na 390 px zostawiałoby dwa słowa w wierszu. */
+    font-size: var(--text-3xl);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--leading-display);
+    /* Dwa wiersze mają być podobnej długości — tak łamie się w makiecie. */
+    text-wrap: balance;
+  }
+
+  .impact__screen {
+    width: 100%;
+  }
+
+  .impact__screen :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  @media (min-width: 768px) {
+    .impact__glow {
+      width: var(--impact-glow-width);
+      translate: -50% var(--impact-glow-shift);
+    }
+
+    .impact__heading {
+      font-size: var(--text-4xl);
+    }
+  }
+</style>

@@ -1,0 +1,458 @@
+---
+import type { CustomerReviewsBlock } from '@repo/shared'
+import Picture from '@/components/ui/Picture.astro'
+
+interface Props {
+  block: CustomerReviewsBlock
+}
+
+const { block } = Astro.props
+const headingId = 'customer-reviews-heading'
+const starId = 'customer-reviews-star'
+
+/*
+ * Trzy kolumny, opinie rozdzielane po kolei (1 → 2 → 3 → 1 …), a nie plastrami
+ * po jednej trzeciej listy: przy plastrach kolejność czytania w pionie zależy
+ * od DŁUGOŚCI listy, a po kolei — zawsze jest ta sama.
+ */
+const COLUMNS = 3
+
+const columns = Array.from({ length: COLUMNS }, (_, column) =>
+  block.reviews.filter((_review, index) => index % COLUMNS === column),
+)
+
+/*
+ * Marquee bez JS, ta sama mechanika co w `TrustedBy`, tylko w pionie: tor
+ * zawiera całkowitą liczbę kopii listy i przesuwa się dokładnie o jedną kopię,
+ * więc klatka końcowa jest tożsama z początkową. Kopii musi być tyle, żeby tor
+ * był wyraźnie wyższy od okna — inaczej pas kończy się pustką.
+ */
+const MIN_CARDS_PER_TRACK = 6
+
+const tracks = columns
+  .filter((cards) => cards.length > 0)
+  .map((cards) => ({
+    cards,
+    copies: Math.max(2, Math.ceil(MIN_CARDS_PER_TRACK / cards.length)),
+    /* Czas odmierza JEDNĄ kopię — patrz komentarz przy `--review-card-duration`. */
+    cardsPerCopy: cards.length,
+  }))
+---
+
+{/*
+  Wejście sekcji. Grupa trzyma wszystkie animacje w środku na pierwszej klatce,
+  dopóki obserwator w BaseLayout nie uzna, że warto ją odegrać — mechanizm jest
+  opisany przy „W polu widzenia" w global.css.
+*/}
+<section class="reviews" aria-labelledby={headingId} data-reveal-group>
+  {/*
+    Gwiazdka jest jednym rysunkiem użytym kilkadziesiąt razy (5 × liczba boxów
+    × liczba kopii toru) — wklejona inline za każdym razem kosztowałaby kilka
+    KB dokumentu. `<symbol>` + `<use>` to jedna definicja i referencje.
+  */}
+  <svg class="reviews__sprite" aria-hidden="true" focusable="false">
+    <symbol id={starId} viewBox="0 0 19 18">
+      <path
+        d="M3.68681 17.5331C3.23601 17.187 3.13941 16.6154 3.38091 15.907L4.99092 11.1333L0.893449 8.20311C0.273596 7.76036 -0.000105631 7.24516 0.185045 6.6897C0.370196 6.1584 0.885399 5.9008 1.6421 5.9008H6.66533L8.19484 1.14322C8.42829 0.410671 8.82274 0.000118819 9.40234 0.000118819C9.9739 0.000118819 10.3683 0.410671 10.6018 1.14322L12.1313 5.9008H17.1465C17.9112 5.9008 18.4264 6.1584 18.6116 6.69775C18.7967 7.24516 18.523 7.76036 17.9032 8.20311L13.8057 11.1333L15.4157 15.907C15.6572 16.6154 15.5606 17.187 15.1098 17.5331C14.651 17.8873 14.0794 17.7746 13.4515 17.3238L9.40234 14.3372L5.33707 17.3238C4.71722 17.7746 4.14567 17.8873 3.68681 17.5331Z"
+      ></path>
+    </symbol>
+  </svg>
+
+  <div class="container-page reviews__intro">
+    <p class="reviews__eyebrow reveal" style="--reveal-index: 0">{block.eyebrow}</p>
+    <h2 id={headingId} class="reviews__heading reveal" style="--reveal-index: 1">{block.heading}</h2>
+    <p class="reviews__description reveal" style="--reveal-index: 2">{block.description}</p>
+  </div>
+
+  <div class="reviews__wall">
+    {/*
+      Kadr pod ścianą. Wtapia się maską wygaszającą go we wszystkie strony,
+      zanim krawędź pliku zdąży się pojawić — ta sama zasada co przy łunie
+      w `OurImpact` (patrz P-037).
+    */}
+    <div class="reviews__backdrop reveal-fade" style="--reveal-index: 0" aria-hidden="true">
+      <Picture image={block.background} widths={[768, 1440, 1920]} sizes="100vw" />
+    </div>
+
+    <div class="container-page reviews__columns reveal-fade" style="--reveal-index: 3">
+      {
+        tracks.map((track, columnIndex) => (
+          /*
+            Tor jest duplikatem treści i jedzie w pętli, więc jako całość stoi
+            poza drzewem dostępności — opinie czytnik ekranu dostaje raz,
+            z listy pod spodem.
+          */
+          <ul
+            class="reviews__track"
+            data-reverse={columnIndex % 2 === 1 ? '' : undefined}
+            style={`--marquee-copies: ${track.copies}; --marquee-cards: ${track.cardsPerCopy}`}
+            aria-hidden="true"
+          >
+            {Array.from({ length: track.copies }, (_copy, copyIndex) =>
+              track.cards.map((review) => (
+                /*
+                  Kopie 2, 3, … istnieją wyłącznie po to, żeby pętla pasa miała
+                  czym się domknąć. Poniżej 768 px pasa nie ma, więc duplikaty
+                  są tam wyłączane — inaczej lista powtarzałaby się kilka razy.
+                */
+                <li data-copy={copyIndex > 0 ? '' : undefined}>
+                  <figure class="review">
+                    <div class="review__top">
+                      <div class="review__stars">
+                        {Array.from({ length: review.rating }, () => (
+                          <svg class="review__star" viewBox="0 0 19 18">
+                            <use href={`#${starId}`} />
+                          </svg>
+                        ))}
+                      </div>
+
+                      {review.logo && (
+                        <Picture class="review__logo" image={review.logo} widths={[192]} sizes="96px" />
+                      )}
+                    </div>
+
+                    <blockquote class="review__quote">
+                      <p>{review.quote}</p>
+                    </blockquote>
+
+                    <figcaption class="review__author">{review.author}</figcaption>
+                  </figure>
+                </li>
+              )),
+            )}
+          </ul>
+        ))
+      }
+    </div>
+  </div>
+
+  <ul class="sr-only">
+    {
+      block.reviews.map((review) => (
+        <li>
+          {review.rating}/5 — {review.quote} — {review.author}
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+<style>
+  .reviews {
+    padding-block: var(--section-padding-y) 0;
+  }
+
+  /* Definicja sprite'u nie zajmuje miejsca w layoucie. */
+  .reviews__sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+  }
+
+  .reviews__intro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .reviews__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-5);
+    color: var(--color-fg);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-wide);
+    line-height: var(--leading-tight);
+    text-transform: uppercase;
+  }
+
+  .reviews__eyebrow::before {
+    content: '';
+    width: var(--space-1);
+    height: var(--space-1);
+    background-color: var(--color-brand);
+  }
+
+  .reviews__heading {
+    max-width: var(--impact-heading-width);
+    margin: 0 0 var(--space-4);
+    color: var(--color-fg);
+    font-family: var(--font-heading);
+    /* 48 px dotyczy desktopu — na 390 px zostawiałoby dwa słowa w wierszu. */
+    font-size: var(--text-3xl);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--leading-display);
+    text-wrap: balance;
+  }
+
+  .reviews__description {
+    max-width: var(--faq-intro-width);
+    margin: 0;
+    color: var(--color-fg-muted);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  /* ── Ściana opinii ──────────────────────────────────────────────────────── */
+
+  /*
+   * Poniżej 768 px ściana NIE jedzie. Trzy tory jeden pod drugim w jednej
+   * kolumnie znaczyłyby, że w oknie widać wyłącznie pierwszy, a dwie trzecie
+   * opinii nie pokazałyby się nigdy. Zamiast tego pas rozwija się w listę:
+   * okno bez ustalonej wysokości, bez animacji, bez duplikatów kopii.
+   */
+  .reviews__wall {
+    position: relative;
+    margin-block-start: var(--space-7);
+    /*
+      Grupa kompozycji. Bez izolacji ujemny `z-index` kadru wypadłby do
+      stackingu strony, czyli pod tło malowane przez `body`.
+    */
+    isolation: isolate;
+  }
+
+  .reviews__backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    /*
+      Kadr jest prostokątem, którego każda krawędź byłaby widocznym odcięciem.
+      Maska wygasza go we wszystkie strony, zanim krawędź się pojawi — dlatego
+      elipsa, a nie gradient pionowy (ta sama zasada co w OurImpact).
+    */
+    mask-image: radial-gradient(75% 60% at 50% 45%, #000 35%, rgb(0 0 0 / 0.3) 70%, transparent 100%);
+    pointer-events: none;
+  }
+
+  /* PUŁAPKA (PLAYBOOK P-011): `<img>` z Picture.astro nie ma `data-astro-cid-*`
+     tego bloku — selektor musi iść przez rodzica i `:global()`. */
+  .reviews__backdrop :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /*
+   * Wygaszenie góry i dołu. Nakładka NAD boxami (nie maska na oknie): box ma
+   * `backdrop-filter`, a maska na jego przodku wycina go z grupy kompozycji
+   * razem z tym, co ma rozmywać. Gradient jest podany wprost przez klienta.
+   */
+  .reviews__wall::before,
+  .reviews__wall::after {
+    /* Wygaszenie krawędzi ma sens tylko wtedy, gdy jest co obcinać — patrz
+       reguła w `@media (min-width: 768px)`. */
+    content: none;
+    position: absolute;
+    inset-inline: 0;
+    z-index: 1;
+    height: var(--review-scrim-size);
+    background: var(--review-scrim);
+    pointer-events: none;
+  }
+
+  .reviews__wall::before {
+    inset-block-start: 0;
+    /* Ten sam gradient odwrócony — tło strony u góry, przezroczystość niżej. */
+    rotate: 180deg;
+  }
+
+  .reviews__wall::after {
+    inset-block-end: 0;
+  }
+
+  .reviews__columns {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--review-wall-gap);
+    height: 100%;
+  }
+
+  .reviews__track {
+    display: flex;
+    flex-direction: column;
+    gap: var(--review-wall-gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    /*
+      Tor ma być wysoki na SWOJĄ treść, nie na okno. Domyślne rozciągnięcie
+      przez siatkę robi dwie szkody naraz: `translate` w procentach liczy się
+      wtedy od wysokości okna (pętla się nie domyka), a boxy — jako elementy
+      flex — kurczą się, żeby zmieścić się w tej wysokości.
+    */
+    align-self: start;
+  }
+
+  .reviews__track > li {
+    flex: none;
+  }
+
+  .reviews__track > li[data-copy] {
+    display: none;
+  }
+
+  @keyframes review-marquee {
+    from {
+      translate: 0 0;
+    }
+    to {
+      translate: 0 calc(-1 * (100% + var(--review-wall-gap)) / var(--marquee-copies));
+    }
+  }
+
+  /*
+   * WCAG 2.2.2: ruch trwający dłużej niż 5 s musi dać się zatrzymać. Tu ruch
+   * niesie TEKST, więc pauza jest wymaganiem, nie ozdobą.
+   *
+   * Zatrzymuje się WYŁĄCZNIE kolumna pod kursorem, nie cała ściana: czytam
+   * jedną opinię, a nie trzy naraz, więc zamrożenie sąsiednich kolumn niczego
+   * mi nie daje, a wygląda jak zacięcie się całej sekcji.
+   */
+  .reviews__track:hover {
+    animation-play-state: paused;
+  }
+
+  /*
+   * Globalna reguła z global.css skraca czas do 0,01 ms, co przy pętli zostawia
+   * pas na klatce końcowej — tożsamej z początkową. Wyłączamy mimo to wprost,
+   * żeby nie polegać na tej tożsamości.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .reviews__track {
+      animation: none;
+    }
+  }
+
+  /* ── Box opinii ─────────────────────────────────────────────────────────── */
+
+  .review {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    height: 100%;
+    margin: 0;
+    padding: var(--review-card-padding);
+    border: 1px solid var(--review-card-border);
+    border-radius: var(--review-card-radius);
+    background-color: var(--review-card-bg);
+    /* Ma co rozmywać: pod boxem leży kadr, nie jednolita płyta (por. P-015). */
+    backdrop-filter: blur(var(--review-card-blur));
+  }
+
+  .review__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+
+  .review__stars {
+    display: flex;
+    gap: var(--space-1);
+  }
+
+  .review__star {
+    width: var(--review-star-width);
+    height: var(--review-star-height);
+    fill: var(--review-star-color);
+  }
+
+  .review :global(.review__logo) {
+    width: auto;
+    max-width: var(--review-logo-max-width);
+    max-height: var(--review-logo-max-height);
+    object-fit: contain;
+  }
+
+  .review__quote {
+    margin: 0;
+    color: var(--color-fg);
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-relaxed);
+  }
+
+  .review__quote p {
+    margin: 0;
+  }
+
+  /*
+   * Podpis stoi przy DOLNEJ krawędzi boxa, nie w odstępie od cytatu — dzięki
+   * temu w kolumnie o różnych długościach opinii wszystkie podpisy siedzą
+   * równo przy krawędzi swojego boxa.
+   */
+  .review__author {
+    display: flex;
+    align-items: center;
+    gap: var(--review-rule-gap);
+    margin-block-start: auto;
+    color: var(--color-fg);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-normal);
+  }
+
+  /* Kreska jest ozdobnikiem typograficznym, nie treścią — stąd ::before. */
+  .review__author::before {
+    content: '';
+    align-self: stretch;
+    width: var(--review-rule-width);
+    background-color: var(--color-brand);
+  }
+
+  @media (min-width: 768px) {
+    .reviews__heading {
+      font-size: var(--text-4xl);
+    }
+
+    .reviews__description {
+      font-size: var(--text-base);
+    }
+
+    .reviews__wall {
+      /* Okno pasa. Wysokość jest stała — patrz `--review-wall-height`. */
+      height: var(--review-wall-height);
+      overflow: hidden;
+    }
+
+    .reviews__wall::before,
+    .reviews__wall::after {
+      content: '';
+    }
+
+    .reviews__columns {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .reviews__track {
+      /*
+        Animowany jest wyłącznie `translate` (AGENT-RULES §6) — bez layoutu
+        i bez malowania. Przesuw obejmuje wysokość jednej kopii RAZEM
+        z odstępem, który dzieli ją od następnej; samo `100% / kopie`
+        zostawiałoby po każdym cyklu brakujące `gap / kopie` i pas dryfowałby
+        w górę.
+      */
+      animation: review-marquee calc(var(--marquee-cards) * var(--review-card-duration)) linear
+        infinite;
+    }
+
+    .reviews__track[data-reverse] {
+      animation-direction: reverse;
+    }
+
+    .reviews__track > li[data-copy] {
+      display: revert;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .reviews__columns {
+      grid-template-columns: repeat(var(--review-wall-columns), minmax(0, 1fr));
+    }
+  }
+</style>
