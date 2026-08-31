@@ -64,34 +64,130 @@ test.describe("Blok WhyChooseUs", () => {
   test("każda ikona ma 32 px szerokości, wysokość zostaje własna", async ({ page }) => {
     /*
      * Rysunki mają różną liczbę kropek w pionie (dwa pliki 32 × 32, dwa 29 × 29),
-     * więc kwadrat wymuszony na sztywno deformowałby połowę z nich.
+     * więc kwadrat wymuszony na sztywno deformowałby połowę z nich. Ikony idą
+     * inline (patrz `ui/DotIcon.astro`), więc proporcję niesie viewBox, a nie
+     * naturalne wymiary pliku.
      */
     await page.goto("/");
     await page.setViewportSize({ width: 1440, height: 900 });
 
     const icons = page.locator(`${SECTION} .why-item__icon`);
-    // Ikony idą `lazy` — dopóki blok jest pod foldem, plik nie jest wczytany
-    // i przeglądarka nie zna jeszcze naturalnych wymiarów rysunku.
-    await page.locator(SECTION).scrollIntoViewIfNeeded();
-    await page.waitForLoadState("networkidle");
-
     const count = await icons.count();
-    expect(count).toBeGreaterThan(0);
+    expect(count).toBe(4);
 
     for (let index = 0; index < count; index += 1) {
-      const icon = icons.nth(index);
-      const drawn = await icon.evaluate((node: HTMLImageElement) => ({
-        natural: { width: node.naturalWidth, height: node.naturalHeight },
+      const drawn = await icons.nth(index).evaluate((node: SVGSVGElement) => ({
+        viewBox: node.getAttribute("viewBox"),
         rendered: node.getBoundingClientRect(),
       }));
 
-      expect(drawn.natural.width).toBeGreaterThan(0);
+      const [, , boxWidth, boxHeight] = drawn.viewBox!.split(/\s+/).map(Number);
+
       expect(drawn.rendered.width).toBeCloseTo(32, 0);
-      // Wysokość WYNIKA z pliku, nie z kwadratu wymuszonego w CSS.
-      expect(drawn.rendered.height).toBeCloseTo(
-        (32 * drawn.natural.height) / drawn.natural.width,
-        0,
-      );
+      // Wysokość WYNIKA z rysunku, nie z kwadratu wymuszonego w CSS.
+      expect(drawn.rendered.height).toBeCloseTo((32 * boxHeight) / boxWidth, 0);
+    }
+  });
+
+  test("ikony nie kosztują ani jednego requestu", async ({ page }) => {
+    /*
+     * Sedno zamiany `<img>` → inline (spec → „Ikony”): cztery pliki z Figmy to
+     * 49 KB w czterech requestach. Gdyby ktoś wrócił do `<img src>`, kropki
+     * przestałyby migotać BEZ ŻADNEGO objawu w teście wizualnym — snapshot
+     * robi się przy `reduce`, czyli na klatce spoczynkowej, która wygląda
+     * identycznie. Test pilnuje więc drugiej strony tej samej decyzji.
+     */
+    const vectors: string[] = [];
+    page.on("request", (request) => {
+      if (/why-choose\/.*\.svg/.test(request.url())) vectors.push(request.url());
+    });
+
+    await page.goto("/");
+    await page.locator(SECTION).scrollIntoViewIfNeeded();
+    await page.waitForLoadState("networkidle");
+
+    expect(vectors, "ikona pojechała plikiem — kropki znów są pikselami").toEqual([]);
+    // Kropki są elementami dokumentu, więc CSS ma do nich dostęp.
+    expect(await page.locator(`${SECTION} .why-item__icon circle`).count()).toBeGreaterThan(200);
+  });
+
+  test("rysunek zachowuje trzy warstwy z eksportu, nie jedną siatkę", async ({ page }) => {
+    /*
+     * Plik z Figmy nie jest jedną siatką kropek w jednym kolorze: martwa siatka
+     * tła (#242624) jest ostra, czerwona kopia KSZTAŁTU leży pod nią rozmyta,
+     * a na wierzchu stoją te same pozycje w kolorze treści. Spłaszczenie tego
+     * do jednej warstwy (albo rozmycie całości) psuje rysunek w sposób, którego
+     * snapshot sekcji nie złapie — ikona ma 32 px, więc różnica ginie pod
+     * tolerancją porównania.
+     */
+    await page.goto("/");
+    await page.locator(SECTION).scrollIntoViewIfNeeded();
+
+    const icon = page.locator(`${SECTION} .why-item__icon`).first();
+
+    const layers = await icon.evaluate((svg: SVGSVGElement) => {
+      const read = (selector: string) => {
+        const group = svg.querySelector(selector)!;
+        const style = getComputedStyle(group);
+        return {
+          dots: group.querySelectorAll("circle").length,
+          fill: style.fill,
+          blurred: style.filter !== "none",
+        };
+      };
+      return {
+        glow: read(".dot-icon__glow"),
+        grid: read(".dot-icon__grid"),
+        face: read(".dot-icon__face"),
+      };
+    });
+
+    // Poświata i kształt to TE SAME pozycje — czerwień jest podkładem kropki.
+    expect(layers.glow.dots).toBe(layers.face.dots);
+    // Siatka tła jest liczniejsza od kształtu; gdyby było odwrotnie, parser
+    // pomylił warstwy i rysunek byłby negatywem samego siebie.
+    expect(layers.grid.dots).toBeGreaterThan(layers.face.dots);
+
+    expect(layers.glow.fill, "poświata nie jest czerwienią marki").toBe("rgb(255, 0, 67)");
+    expect(layers.face.fill, "kształt nie jest w kolorze treści").toBe("rgb(254, 255, 241)");
+    /*
+     * Kropki tła są malowane KOLOREM TREŚCI, nie szarością #242624 z eksportu:
+     * głowa sopla ma być biała. Szarość z pliku jest wynikiem spoczynkowego
+     * krycia, nie wartością — sprawdza to osobny test niżej.
+     */
+    expect(layers.grid.fill, "siatka tła zgubiła swój kolor").toBe("rgb(254, 255, 241)");
+
+    // Rozmyta jest WYŁĄCZNIE poświata — reszta rysunku zostaje ostra.
+    expect(layers.glow.blurred, "poświata przestała być rozmyta").toBe(true);
+    expect(layers.grid.blurred, "siatka tła została rozmyta").toBe(false);
+    expect(layers.face.blurred, "kształt został rozmyty").toBe(false);
+  });
+
+  test("kropka tła w spoczynku ma kolor z eksportu, mimo jaśniejszego fillu", async ({ page }) => {
+    /*
+     * Para `--dot-icon-grid` + `--dot-icon-grid-rest` jest policzona tak, żeby
+     * złożyć się na tle strony (#0d0f0d) dokładnie w #242624 z pliku Figmy.
+     * Zmiana jednej z nich bez drugiej przesuwa SPOCZYNKOWY wygląd wszystkich
+     * czterech ikon — a że różnica jest o kilka jednostek na kanale, snapshot
+     * sekcji przepuści ją pod tolerancją.
+     */
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/");
+    await page.locator(SECTION).scrollIntoViewIfNeeded();
+
+    const composited = await page
+      .locator(`${SECTION} .dot-icon__grid circle`)
+      .first()
+      .evaluate((dot) => {
+        const alpha = Number(getComputedStyle(dot).opacity);
+        const fill = getComputedStyle(dot.parentElement!).fill.match(/[\d.]+/g)!.map(Number);
+        const page = [13, 15, 13]; // --color-bg, #0d0f0d
+        return fill.map((channel, index) => Math.round(page[index]! + alpha * (channel - page[index]!)));
+      });
+
+    /* ±1 na kanale — pary krycia i koloru nie da się dobrać co do jednostki. */
+    for (const [index, channel] of composited.entries()) {
+      expect(Math.abs(channel - [36, 38, 36][index]!)).toBeLessThanOrEqual(1);
     }
   });
 

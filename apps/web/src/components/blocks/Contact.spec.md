@@ -49,6 +49,14 @@ Ta tabela jest źródłem schematu zod w `packages/shared/src/blocks/Contact.ts`
 `type` ∈ `text | tel | email | url` — steruje klawiaturą na mobile i walidacją
 przeglądarki, więc jest danymi, nie stylem.
 
+**Adres strony jest `text`, nie `url`** — świadomie, mimo że semantycznie
+pasowałby `url`. `type="url"` wymaga protokołu, więc odrzuca `invette.dev`,
+czyli dokładnie to, co ludzie wpisują. Pole nie ma `required`: kto nie ma
+jeszcze strony, przechodzi dalej z pustym. Walidacja formatu kosztowałaby tu
+wyłącznie porzucone zgłoszenia — adres i tak trafia do człowieka, nie do
+systemu, który musiałby go sparsować. `autocomplete="url"` zostaje, bo podpowiedź
+przeglądarki działa niezależnie od typu.
+
 `SummaryStep` = `Step & { goalsLabel, detailsLabel, emptyLabel, consent: RichText,
 submitLabel }`.
 `consent` jest `RichText`, bo zawiera link do Polityki Prywatności — jedyne
@@ -87,6 +95,8 @@ Porównanie ze zrzutem w szerokościach 1440 / 768 / 390.
 | pole tekstowe | focus | czerwony pierścień (`::after`, `opacity` 0 → 1) i etykieta odjeżdża w górę |
 | pole tekstowe | wypełnione | etykieta ZOSTAJE u góry po odejściu fokusa (`:not(:placeholder-shown)`) |
 | pole tekstowe | autouzupełnione | podkład `--contact-field-autofill` cieniem `inset` — Chrome ignoruje `background` |
+| pole „Strona internetowa" | dowolny wpis | **bez walidacji formatu i bez `required`** — patrz „Pola" |
+| wiersz zgody | — | kwadracik równa się do osi PIERWSZEGO wiersza tekstu, nie do pudełka etykiety (poniżej 768 px zgoda ma dwa wiersze) |
 | przycisk „dalej" | brak wyboru | **nie** jest `disabled` — kliknięcie pokazuje komunikat błędu, bo wyłączony przycisk nie mówi, czego brakuje |
 | przycisk „wyślij" | `action` puste | `disabled`, bez komunikatu — decyzja klienta z 2026-08-27 |
 
@@ -99,9 +109,48 @@ Porównanie ze zrzutem w szerokościach 1440 / 768 / 390.
 | pierścień pola (`opacity` 0 → 1) | focus | `--duration-base` | `--ease-standard` | jw. |
 | wejście sekcji: kadr w tle, etykieta, nagłówek, lead, płyta kreatora | wjazd sekcji w kadr (grupa `data-reveal-group`) | `--duration-reveal` (0,9 s), krok `--reveal-step` | `--ease-out-expo` | wyłączone globalnie — ląduje na klatce końcowej |
 | przycisk: czerwony kłąb spod kursora | hover / fokus | `--duration-slow` (kłąb), `--duration-base` (etykieta) | `--ease-out-expo` | wyłączone globalnie |
+| zamiana kroku: przenikanie treści + dojazd wysokości płyty | „dalej", „wstecz", klik w odwiedzony krok | `--contact-step-swap-duration` (0,38 s; zanik odchodzącego 0,45 tego czasu, wejście po 0,35) | `--ease-out-expo` | krok podmienia się natychmiast — skrypt pyta `matchMedia` |
+| gradient aktywnego kafla w pasie kroków | zmiana kroku | `--duration-base` | `--ease-standard` | globalne skrócenie do 0,01 ms |
+| „wstecz" / „wyślij" pojawiają się z zanikiem | zmiana kroku | `--contact-step-swap-duration` | `--ease-out-expo` | jw. — bez ruchu |
 
-Brak animacji wejścia i brak przejść między krokami: krok podmienia się
-natychmiast, żeby fokus nie wędrował po animowanym elemencie.
+### Zamiana kroku
+
+Trzy rzeczy jadą jako jedno zdarzenie dla oka:
+
+1. **Krok odchodzący** wypada z układu (`.step--leaving`, `position: absolute`
+   w scenie `.steps`), zanika i cofa się o `--contact-step-swap-shift`.
+2. **Krok wchodzący** przypływa z przeciwnej strony — kierunek niesie znak,
+   więc „dalej" przesuwa treść w lewo, a „wstecz" w prawo.
+3. **Wysokość sceny** dojeżdża ze starej wartości do nowej. Bez tego kroki
+   o różnej wysokości szarpią przyciskami pod formularzem o kilkadziesiąt
+   pikseli w pierwszej klatce — to jest ta połowa efektu, którą widać
+   najbardziej, i jedyna, która nie jest składana przez kompozytor.
+
+Wysokość to własność układu, więc animacja jest tu świadomym wyjątkiem od §6:
+odpala się na kliknięcie, trwa 0,38 s i dotyczy jednego pudełka, które nie
+przewija się w tym czasie. Alternatywy odrzucone: `interpolate-size` (wsparcie
+przeglądarek za świeże na etap 1), skalowanie płyty (rozjeżdża tekst),
+zamrożenie wysokości do najwyższego kroku (pusta przestrzeń pod krokiem 1).
+
+Przycięcie sceny (`overflow: clip`) żyje **tylko** na czas ruchu wysokości.
+Na stałe obcinałoby pierścień fokusa i dymki natywnej walidacji, a bez niego
+wyższy krok wylewa się na przyciski, zanim scena do niego dojedzie.
+
+Fokus nadal idzie na nagłówek kroku od razu, ale z `preventScroll: true`:
+przeglądarka dociągałaby stronę do celu liczonego w POŁOWIE ruchu, czyli
+szarpała scrollem. Płyta i tak jest w kadrze — użytkownik przed chwilą kliknął
+w niej przycisk.
+
+Gradient aktywnego kafla jest osobną warstwą (`.tab::before` z `opacity`),
+bo `background` nie interpoluje między kolorem a gradientem: podmiana wprost
+przeskakiwałaby o klatkę, podczas gdy obrys i tekst płynnie dojeżdżają. Ikona
+i podpis mają przez to `position: relative` — warstwa jest pozycjonowana, więc
+bez tego malowałaby się NAD nimi i aktywny kafel byłby pusty (PLAYBOOK P-059).
+
+Przenikanie jest sekwencyjne, nie „na krzyż": odchodzący gaśnie przez 0,45
+czasu, wchodzący startuje po 0,35. Oba kroki mają tekst wyśrodkowany w tym samym
+miejscu, więc równoległe przenikanie dawało na chwilę dwa czytelne napisy jeden
+na drugim.
 
 Etykieta pola rusza się przez `translate` i `scale` — właściwości składane przez
 kompozytor, zgodnie z §6. Świadomie NIE animujemy jej `font-size` (przeliczenie
@@ -130,7 +179,7 @@ Blok podaje wyłącznie kolory, mechaniki nie powtarza.
 
 | Pozycja | Budżet | Faktycznie |
 |---|---|---|
-| JS (skompresowany) | 0 KB | **0,8 KB** (gzip, zmierzone) — uzasadnienie niżej |
+| JS (skompresowany) | 0 KB | **1,5 KB** (gzip, zmierzone) — uzasadnienie niżej |
 | Requesty | 1 (kadr tła) | 1 |
 | Największy zasób | `contact-bg.jpg` → AVIF | 35 KB źródła |
 

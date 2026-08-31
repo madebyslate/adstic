@@ -157,122 +157,131 @@ const ICON_IDS = ['contact-icon-store', 'contact-icon-chart', 'contact-icon-cale
           }
         </ol>
 
-        {/* ── Krok 1: cele ─────────────────────────────────────────────── */}
-        <fieldset class="step" data-step="0" aria-describedby={errorId}>
-          {/*
-            `<legend>`, nie `<h3>`: to pytanie do grupy pól, a nie nagłówek
-            dokumentu — nagłówkiem sekcji zostaje `<h2>` wyżej.
-          */}
-          <legend class="step__heading" data-step-heading tabindex="-1">
-            {block.goalsStep.heading}
-          </legend>
-          <p class="step__description">{block.goalsStep.description}</p>
-
-          {/*
-            Komunikat jest w DOM od początku i tylko chowany — czytnik ekranu
-            musi mieć region, do którego treść wjedzie, zanim się pojawi.
-          */}
-          <p class="step__error" id={errorId} role="status" hidden>
-            {block.goalsStep.errorMessage}
-          </p>
-
-          <ul class="options">
-            {
-              block.goalsStep.options.map((option) => (
-                <li>
-                  <label class="option">
-                    <input class="option__input" type="checkbox" name="goals" value={option} data-goal />
-                    <span class="option__box" aria-hidden="true">
-                      <svg class="option__check" viewBox="0 0 13 9" fill="none" focusable="false">
-                        <path
-                          d="M11.4167 0.75L4.08333 8.08333L0.75 4.75"
-                          stroke="currentColor"
-                          stroke-width="1.5"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                      </svg>
-                    </span>
-                    <span class="option__label">{option}</span>
-                  </label>
-                </li>
-              ))
-            }
-          </ul>
-        </fieldset>
-
-        {/* ── Krok 2: dane kontaktowe ──────────────────────────────────── */}
-        <div class="step" data-step="1">
-          <p class="step__heading" data-step-heading tabindex="-1">{block.detailsStep.heading}</p>
-          <p class="step__description">{block.detailsStep.description}</p>
-
-          <div class="fields">
-            {
-              block.detailsStep.fields.map((field) => (
-                <label class="field">
-                  {/*
-                    Kolejność jest tu kontraktem, nie stylem: etykieta stoi PO
-                    polu, bo pływa na `:placeholder-shown` sąsiada, a CSS nie
-                    umie sięgnąć wstecz. `placeholder=" "` (spacja, nie pusty
-                    string) jest tym, co w ogóle włącza ten stan.
-                  */}
-                  <input
-                    class="field__input"
-                    type={field.type}
-                    name={field.name}
-                    placeholder=" "
-                    required={field.required}
-                    autocomplete={field.autocomplete}
-                    data-field-label={field.label}
-                  />
-                  <span class="field__label">{field.label}</span>
-                </label>
-              ))
-            }
-          </div>
-        </div>
-
-        {/* ── Krok 3: przegląd, zgoda, wysyłka ─────────────────────────── */}
-        <div class="step" data-step="2">
-          <p class="step__heading" data-step-heading tabindex="-1">{block.summaryStep.heading}</p>
-          <p class="step__description">{block.summaryStep.description}</p>
-
-          {/*
-            Przegląd wypełnia skrypt z tego, co użytkownik zaznaczył i wpisał.
-            Bez JS nie ma czego streszczać — stąd `hidden` w HTML, zdejmowane
-            przy starcie skryptu.
-          */}
-          <div class="summary" data-summary hidden>
-            <dl class="summary__list">
-              <div class="summary__row">
-                <dt class="summary__term">{block.summaryStep.goalsLabel}</dt>
-                <dd class="summary__value" data-summary-goals>{block.summaryStep.emptyLabel}</dd>
-              </div>
-              <div class="summary__row">
-                <dt class="summary__term">{block.summaryStep.detailsLabel}</dt>
-                <dd class="summary__value" data-summary-details>{block.summaryStep.emptyLabel}</dd>
-              </div>
-            </dl>
-          </div>
-
-          <label class="consent">
-            <input class="option__input" type="checkbox" name="consent" required />
-            <span class="option__box" aria-hidden="true">
-              <svg class="option__check" viewBox="0 0 13 9" fill="none" focusable="false">
-                <path
-                  d="M11.4167 0.75L4.08333 8.08333L0.75 4.75"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"></path>
-              </svg>
-            </span>
+        {/*
+          Wspólna scena kroków. Istnieje dla przejścia, nie dla układu: krok
+          odchodzący wypada na chwilę z układu (`position: absolute`), więc musi
+          mieć rodzica z `position: relative`, a wysokość, którą skrypt animuje,
+          musi mieć gdzie usiąść. Bez JS jest zwykłą kolumną z tym samym
+          odstępem, co miały kroki jako dzieci formularza.
+        */}
+        <div class="steps" data-steps>
+          {/* ── Krok 1: cele ─────────────────────────────────────────────── */}
+          <fieldset class="step" data-step="0" aria-describedby={errorId}>
             {/*
-              Jedyna treść bloku ze znacznikiem — zgoda niesie link do Polityki
-              Prywatności, więc jest `RichText`, a nie zwykłym stringiem.
+              `<legend>`, nie `<h3>`: to pytanie do grupy pól, a nie nagłówek
+              dokumentu — nagłówkiem sekcji zostaje `<h2>` wyżej.
             */}
-            <span class="consent__label" set:html={block.summaryStep.consent} />
-          </label>
+            <legend class="step__heading" data-step-heading tabindex="-1">
+              {block.goalsStep.heading}
+            </legend>
+            <p class="step__description">{block.goalsStep.description}</p>
+
+            {/*
+              Komunikat jest w DOM od początku i tylko chowany — czytnik ekranu
+              musi mieć region, do którego treść wjedzie, zanim się pojawi.
+            */}
+            <p class="step__error" id={errorId} role="status" hidden>
+              {block.goalsStep.errorMessage}
+            </p>
+
+            <ul class="options">
+              {
+                block.goalsStep.options.map((option) => (
+                  <li>
+                    <label class="option">
+                      <input class="option__input" type="checkbox" name="goals" value={option} data-goal />
+                      <span class="option__box" aria-hidden="true">
+                        <svg class="option__check" viewBox="0 0 13 9" fill="none" focusable="false">
+                          <path
+                            d="M11.4167 0.75L4.08333 8.08333L0.75 4.75"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                      </span>
+                      <span class="option__label">{option}</span>
+                    </label>
+                  </li>
+                ))
+              }
+            </ul>
+          </fieldset>
+
+          {/* ── Krok 2: dane kontaktowe ──────────────────────────────────── */}
+          <div class="step" data-step="1">
+            <p class="step__heading" data-step-heading tabindex="-1">{block.detailsStep.heading}</p>
+            <p class="step__description">{block.detailsStep.description}</p>
+
+            <div class="fields">
+              {
+                block.detailsStep.fields.map((field) => (
+                  <label class="field">
+                    {/*
+                      Kolejność jest tu kontraktem, nie stylem: etykieta stoi PO
+                      polu, bo pływa na `:placeholder-shown` sąsiada, a CSS nie
+                      umie sięgnąć wstecz. `placeholder=" "` (spacja, nie pusty
+                      string) jest tym, co w ogóle włącza ten stan.
+                    */}
+                    <input
+                      class="field__input"
+                      type={field.type}
+                      name={field.name}
+                      placeholder=" "
+                      required={field.required}
+                      autocomplete={field.autocomplete}
+                      data-field-label={field.label}
+                    />
+                    <span class="field__label">{field.label}</span>
+                  </label>
+                ))
+              }
+            </div>
+          </div>
+
+          {/* ── Krok 3: przegląd, zgoda, wysyłka ─────────────────────────── */}
+          <div class="step" data-step="2">
+            <p class="step__heading" data-step-heading tabindex="-1">{block.summaryStep.heading}</p>
+            <p class="step__description">{block.summaryStep.description}</p>
+
+            {/*
+              Przegląd wypełnia skrypt z tego, co użytkownik zaznaczył i wpisał.
+              Bez JS nie ma czego streszczać — stąd `hidden` w HTML, zdejmowane
+              przy starcie skryptu.
+            */}
+            <div class="summary" data-summary hidden>
+              <dl class="summary__list">
+                <div class="summary__row">
+                  <dt class="summary__term">{block.summaryStep.goalsLabel}</dt>
+                  <dd class="summary__value" data-summary-goals>{block.summaryStep.emptyLabel}</dd>
+                </div>
+                <div class="summary__row">
+                  <dt class="summary__term">{block.summaryStep.detailsLabel}</dt>
+                  <dd class="summary__value" data-summary-details>{block.summaryStep.emptyLabel}</dd>
+                </div>
+              </dl>
+            </div>
+
+            <label class="consent">
+              <input class="option__input" type="checkbox" name="consent" required />
+              <span class="option__box" aria-hidden="true">
+                <svg class="option__check" viewBox="0 0 13 9" fill="none" focusable="false">
+                  <path
+                    d="M11.4167 0.75L4.08333 8.08333L0.75 4.75"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"></path>
+                </svg>
+              </span>
+              {/*
+                Jedyna treść bloku ze znacznikiem — zgoda niesie link do Polityki
+                Prywatności, więc jest `RichText`, a nie zwykłym stringiem.
+              */}
+              <span class="consent__label" set:html={block.summaryStep.consent} />
+            </label>
+          </div>
         </div>
 
         <div class="contact__actions">
@@ -313,6 +322,7 @@ const ICON_IDS = ['contact-icon-store', 'contact-icon-chart', 'contact-icon-cale
   function setupForm(form: HTMLFormElement) {
     const tabs = Array.from(form.querySelectorAll<HTMLButtonElement>('[data-step-tab]'))
     const panels = Array.from(form.querySelectorAll<HTMLElement>('[data-step]'))
+    const stage = form.querySelector<HTMLElement>('[data-steps]')
     const next = form.querySelector<Nav>('[data-next]')
     const back = form.querySelector<Nav>('[data-back]')
     const submit = form.querySelector<Nav>('[data-submit]')
@@ -328,6 +338,163 @@ const ICON_IDS = ['contact-icon-store', 'contact-icon-chart', 'contact-icon-cale
     let current = 0
     /* Najdalszy odwiedzony krok — do niego (i tylko do niego) wolno skoczyć. */
     let reached = 0
+
+    /*
+     * Czas i dystans przejścia mieszkają w tokenach, nie tutaj — skrypt tylko
+     * je odczytuje, i to przy KAŻDEJ zamianie, nie raz na starcie: w chwili,
+     * gdy `<script>` się wykonuje, `getComputedStyle` potrafi jeszcze zwrócić
+     * dla custom property pusty string (arkusz nie jest policzony). Odczyt raz
+     * na starcie dawał więc czas 0 i przejście, którego nie widać.
+     *
+     * PUŁAPKA (PLAYBOOK P-058): jednostka nie jest tą, którą napisano
+     * w tokenach — Lightning CSS skraca `380ms` do `.38s`, więc samo
+     * `parseFloat` daje 0,38 i całe przejście trwa pół klatki. Lokalnie
+     * niewidoczne: `astro dev` nie minifikuje.
+     */
+    const motionOff = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+    const readMs = (value: string) => {
+      const amount = Number.parseFloat(value)
+      if (!Number.isFinite(amount)) return 0
+      return /ms$/.test(value.trim()) ? amount : amount * 1000
+    }
+
+    const swapMotion = () => {
+      const tokens = getComputedStyle(form)
+      const duration = readMs(tokens.getPropertyValue('--contact-step-swap-duration'))
+      return {
+        duration,
+        shift: tokens.getPropertyValue('--contact-step-swap-shift').trim() || '0px',
+        easing: tokens.getPropertyValue('--ease-out-expo').trim() || 'ease-out',
+        /*
+         * Ruch jest wygodą, nie funkcją: przy `prefers-reduced-motion`
+         * (AGENT-RULES §6) i w przeglądarce bez Web Animations krok podmienia
+         * się natychmiast, dokładnie jak przed tą zmianą. Pytanie zadajemy przy
+         * każdej zamianie, bo ustawienie systemowe da się przełączyć bez
+         * przeładowania strony.
+         */
+        allowed:
+          Boolean(stage) &&
+          duration > 0 &&
+          !motionOff.matches &&
+          'animate' in Element.prototype,
+      }
+    }
+
+    /* Sprzątanie po kroku, który jeszcze odjeżdża. Ustawiane przez `swap`. */
+    let endLeave: (() => void) | null = null
+    let heightAnimation: Animation | null = null
+
+    /*
+     * Przejście między krokami. Trzy ruchy w jednym zdarzeniu dla oka: krok
+     * odchodzący zanika i cofa się, wchodzący przypływa z przeciwnej strony,
+     * a scena dojeżdża ze starej wysokości do nowej. Kierunek niesie znak —
+     * „dalej" przesuwa treść w lewo, „wstecz" w prawo.
+     */
+    const swap = (from: number, to: number) => {
+      const outgoing = panels[from]
+      const incoming = panels[to]
+
+      endLeave?.()
+      const motion = swapMotion()
+
+      if (!stage || !outgoing || !incoming || from === to || !motion.allowed) {
+        panels.forEach((panel, position) => {
+          panel.hidden = position !== to
+        })
+        return
+      }
+
+      /*
+       * Wysokość czytana PRZED anulowaniem poprzedniej animacji: przy szybkim
+       * klikaniu nowe przejście ma ruszyć stamtąd, gdzie scena właśnie jest,
+       * a nie skoczyć do wysokości kroku, którego nikt już nie ogląda.
+       */
+      const startHeight = stage.getBoundingClientRect().height
+      heightAnimation?.cancel()
+
+      panels.forEach((panel, position) => {
+        panel.hidden = position !== to
+      })
+      const endHeight = stage.getBoundingClientRect().height
+
+      const direction = to > from ? 1 : -1
+      const away = `translate3d(calc(${motion.shift} * ${-direction}), 0, 0)`
+      const toward = `translate3d(calc(${motion.shift} * ${direction}), 0, 0)`
+      const rest = 'translate3d(0, 0, 0)'
+
+      /* Odchodzący wraca do DOM jako warstwa poza układem — patrz `.step--leaving`. */
+      outgoing.hidden = false
+      outgoing.classList.add('step--leaving')
+      outgoing.setAttribute('aria-hidden', 'true')
+      stage.setAttribute('data-swapping', '')
+
+      const leave = outgoing.animate([{ opacity: 1, transform: rest }, { opacity: 0, transform: away }], {
+        /* Nie połowa całości, tylko mniej: oba kroki mają tekst wyśrodkowany
+           w tym samym miejscu, więc przenikanie „na krzyż" daje na chwilę dwa
+           czytelne napisy jeden na drugim. Odchodzący ma zdążyć zniknąć, zanim
+           wchodzący zacznie się pojawiać — stąd 0,45 tu i opóźnienie 0,35 tam. */
+        duration: motion.duration * 0.45,
+        easing: motion.easing,
+        fill: 'forwards',
+      })
+
+      let leaveDone = false
+      const finishLeave = () => {
+        if (leaveDone) return
+        leaveDone = true
+        leave.cancel()
+        outgoing.classList.remove('step--leaving')
+        outgoing.removeAttribute('aria-hidden')
+        outgoing.hidden = outgoing !== panels[current]
+        if (endLeave === finishLeave) endLeave = null
+      }
+      endLeave = finishLeave
+      leave.onfinish = finishLeave
+
+      incoming.animate([{ opacity: 0, transform: toward }, { opacity: 1, transform: rest }], {
+        duration: motion.duration * 0.65,
+        delay: motion.duration * 0.35,
+        easing: motion.easing,
+        fill: 'backwards',
+      })
+
+      const height = stage.animate([{ height: `${startHeight}px` }, { height: `${endHeight}px` }], {
+        duration: motion.duration,
+        easing: motion.easing,
+      })
+      /* Przycięcie znika razem z RUCHEM WYSOKOŚCI, nie z zanikiem — do tego
+         momentu wyższy krok wystawałby na przyciski. Warunek `=== height`
+         pilnuje, żeby zdarzenie anulowanej animacji nie zdjęło przycięcia
+         przejściu, które właśnie zaczęło się w jej miejscu. */
+      const releaseClip = () => {
+        if (heightAnimation !== height) return
+        stage.removeAttribute('data-swapping')
+        heightAnimation = null
+      }
+      height.onfinish = releaseClip
+      height.oncancel = releaseClip
+      heightAnimation = height
+    }
+
+    /* Pierwszy przebieg `show` tylko ustawia stan początkowy — nie ma go
+       animować, bo nikt niczego jeszcze nie kliknął. */
+    let ready = false
+
+    /* `hidden` zdejmowane z przejściem: przycisk „wstecz" pojawia się razem
+       z krokiem, a nie klatkę przed nim. */
+    const setNavHidden = (button: Nav, hidden: boolean) => {
+      const appearing = button.hidden && !hidden
+      button.hidden = hidden
+      if (!appearing || !ready) return
+
+      const motion = swapMotion()
+      if (!motion.allowed) return
+      button.animate([{ opacity: 0 }, { opacity: 1 }], {
+        duration: motion.duration,
+        easing: motion.easing,
+      })
+    }
 
     /*
      * Funkcje jako `const`, nie deklaracje: deklaracja jest wyciągana na górę
@@ -375,20 +542,19 @@ const ICON_IDS = ['contact-icon-store', 'contact-icon-chart', 'contact-icon-cale
     }
 
     const show = (index: number, moveFocus: boolean) => {
+      const previous = current
       current = Math.min(Math.max(index, 0), last)
       reached = Math.max(reached, current)
 
-      panels.forEach((panel, position) => {
-        panel.hidden = position !== current
-      })
+      swap(previous, current)
       tabs.forEach((tab, position) => {
         tab.setAttribute('aria-current', position === current ? 'step' : 'false')
         tab.disabled = position > reached
       })
 
-      nav.back.hidden = current === 0
-      nav.next.hidden = current === last
-      nav.submit.hidden = current !== last
+      setNavHidden(nav.back, current === 0)
+      setNavHidden(nav.next, current === last)
+      setNavHidden(nav.submit, current !== last)
 
       if (current === last) fillSummary()
 
@@ -396,8 +562,16 @@ const ICON_IDS = ['contact-icon-store', 'contact-icon-chart', 'contact-icon-cale
       /*
        * Fokus na nagłówek kroku, nie na pierwsze pole: czytnik ekranu ma
        * najpierw usłyszeć, GDZIE jest, a dopiero potem co ma wypełnić.
+       *
+       * `preventScroll` jest tu warunkiem płynności: fokus na elemencie, który
+       * właśnie przypływa w scenie o zmieniającej się wysokości, kazałby
+       * przeglądarce dociągnąć stronę do celu liczonego w POŁOWIE ruchu — czyli
+       * szarpnąć scrollem. Płyta i tak jest w kadrze, bo użytkownik przed chwilą
+       * kliknął w niej przycisk.
        */
-      panels[current]?.querySelector<HTMLElement>('[data-step-heading]')?.focus()
+      panels[current]
+        ?.querySelector<HTMLElement>('[data-step-heading]')
+        ?.focus({ preventScroll: true })
     }
 
     if (summary) summary.hidden = false
@@ -432,6 +606,7 @@ const ICON_IDS = ['contact-icon-store', 'contact-icon-chart', 'contact-icon-cale
     })
 
     show(0, false)
+    ready = true
   }
 
   document.querySelectorAll<HTMLFormElement>('[data-contact-form]').forEach(setupForm)
@@ -624,6 +799,7 @@ const ICON_IDS = ['contact-icon-store', 'contact-icon-chart', 'contact-icon-cale
   }
 
   .tab {
+    position: relative;
     display: flex;
     flex: 1;
     align-items: center;
@@ -640,9 +816,27 @@ const ICON_IDS = ['contact-icon-store', 'contact-icon-chart', 'contact-icon-cale
     line-height: var(--leading-tight);
     text-align: start;
     transition:
-      background-color var(--duration-fast) var(--ease-standard),
-      border-color var(--duration-fast) var(--ease-standard),
-      color var(--duration-fast) var(--ease-standard);
+      background-color var(--duration-base) var(--ease-standard),
+      border-color var(--duration-base) var(--ease-standard),
+      box-shadow var(--duration-base) var(--ease-standard),
+      color var(--duration-base) var(--ease-standard);
+  }
+
+  /*
+    Gradient aktywnego kafla jest OSOBNĄ warstwą, nie tłem taba: `background`
+    nie interpoluje między kolorem a gradientem, więc podmiana wprost skakałaby
+    o klatkę, podczas gdy obrys i tekst płynnie dojeżdżają. Warstwa siada pod
+    obrysem (`inset: -1px`), żeby kafel nie miał ciemnej obwódki w środku.
+  */
+  .tab::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: var(--contact-tab-bg-active);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-base) var(--ease-standard);
   }
 
   /* Krok odwiedzony wraca kliknięciem — nieodwiedzony jest `disabled`. */
@@ -652,9 +846,23 @@ const ICON_IDS = ['contact-icon-store', 'contact-icon-chart', 'contact-icon-cale
 
   .tab[aria-current='step'] {
     border-color: var(--contact-tab-border-active);
-    background: var(--contact-tab-bg-active);
     box-shadow: var(--shadow-contact-tab);
     color: var(--color-fg);
+  }
+
+  .tab[aria-current='step']::before {
+    opacity: 1;
+  }
+
+  /*
+    Ikona i podpis muszą być POZYCJONOWANE, choć nigdzie się nie przesuwają:
+    warstwa gradientu (`::before`) jest `absolute`, a element pozycjonowany
+    maluje się nad zwykłą treścią niezależnie od kolejności w drzewie. Bez tego
+    aktywny kafel jest pustym prostokątem — i to nie rzuca żadnego błędu.
+  */
+  .tab__icon,
+  .tab__label {
+    position: relative;
   }
 
   .tab__icon {
@@ -670,6 +878,41 @@ const ICON_IDS = ['contact-icon-store', 'contact-icon-chart', 'contact-icon-cale
   }
 
   /* ── Krok ─────────────────────────────────────────────────────────────── */
+
+  /*
+    Scena kroków. `position: relative` jest tu wymogiem przejścia, nie ozdobą:
+    krok odchodzący dostaje `position: absolute` i musi się zaczepić o scenę,
+    a nie o płytę. Odstęp i kierunek układu przejęte po formularzu — bez JS
+    scena jest przezroczysta dla oka.
+  */
+  .steps {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  /*
+    Przycięcie WYŁĄCZNIE na czas przejścia. Na stałe obcinałoby pierścień fokusa
+    i dymki natywnej walidacji, które wychodzą poza pudełko kroku; w trakcie
+    zamiany jest odwrotnie — bez niego treść wyższego kroku wylewa się na
+    przyciski, zanim wysokość sceny do niej dojedzie.
+  */
+  .steps[data-swapping] {
+    overflow: clip;
+  }
+
+  /*
+    Krok odchodzący: wypada z układu, żeby wchodzący mógł od razu zająć jego
+    miejsce (przenikanie, nie kolejka dwóch ruchów). `pointer-events: none`,
+    bo przez ~0,4 s leży na wierzchu i przechwyciłby kliknięcie w treść pod nim.
+  */
+  .step--leaving {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    pointer-events: none;
+  }
 
   .step {
     display: flex;
@@ -825,6 +1068,20 @@ const ICON_IDS = ['contact-icon-store', 'contact-icon-chart', 'contact-icon-cale
     margin-top: var(--space-5);
     font-size: var(--text-sm);
     color: var(--color-fg-muted);
+  }
+
+  /*
+    Kwadracik zgody równa się do PIERWSZEGO WIERSZA tekstu, nie do jego pudełka.
+    `align-items: start` jest tu konieczne (zgoda łamie się na dwa wiersze na
+    wąskim ekranie i wtedy `center` odsunąłby znacznik na środek akapitu), ale
+    samo „start" stawia 16-pikselowy kwadrat przy górnej krawędzi 21-pikselowego
+    wiersza — stąd widoczne przesunięcie o ~2 px w górę. Zsuwamy go o połowę
+    różnicy między wysokością wiersza a kwadratem.
+  */
+  .consent .option__box {
+    margin-block-start: calc(
+      (var(--text-sm) * var(--leading-normal) - var(--contact-check-size)) / 2
+    );
   }
 
   .consent__label :global(a) {
@@ -1021,6 +1278,17 @@ const ICON_IDS = ['contact-icon-store', 'contact-icon-chart', 'contact-icon-cale
   }
 
   /*
+    Powtórzenie reguły z `.btn-wipe:hover` (global.css) na miejscu. Obie mają
+    swoistość (0,2,0) po doklejeniu przez Astro atrybutu zakresu, więc o wyniku
+    decydowałaby kolejność arkuszy — a przy przegranej ramka zostaje szarym
+    pierścieniem wokół czerwieni. Tu wygrywa `:hover` w tym samym pliku.
+  */
+  .button--ghost:hover,
+  .button--ghost:focus-visible {
+    border-color: var(--btn-surface-hover, var(--color-brand));
+  }
+
+  /*
     Przycisk wyłączony nie zaprasza — kłąb hoveru ma się nie pojawić mimo klasy
     `.btn-wipe`, a nie tylko zostać przygaszony razem z etykietą.
   */
@@ -1034,6 +1302,7 @@ const ICON_IDS = ['contact-icon-store', 'contact-icon-chart', 'contact-icon-cale
   }
 
   .button:disabled:hover {
+    border-color: var(--color-border);
     color: inherit;
   }
 

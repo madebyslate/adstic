@@ -672,7 +672,7 @@
           {
             "name": "website",
             "label": "Strona internetowa",
-            "type": "url",
+            "type": "text",
             "autocomplete": "url"
           }
         ]

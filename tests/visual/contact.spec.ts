@@ -15,6 +15,26 @@ test.describe("Blok Contact", () => {
     await expect(section).toHaveScreenshot("contact.png");
   });
 
+  test("aktywny kafel w pasie kroków pokazuje ikonę i podpis", async ({ page }) => {
+    /*
+     * Osobny, ciasny snapshot pasa — nie fragment zrzutu całej sekcji. Gradient
+     * aktywnego kafla jest warstwą `::before`, więc potrafi przykryć własną
+     * treść (PLAYBOOK P-059), a na zrzucie CAŁEJ sekcji dwa zgaszone napisy to
+     * ułamek promila pikseli, czyli mniej niż tolerancja porównania. Tutaj
+     * kadrem jest sam pas i każde przykrycie od razu wywraca test.
+     */
+    await page.goto("/");
+
+    const section = page.locator(SECTION);
+    await section.scrollIntoViewIfNeeded();
+    await expect(section.locator(".contact__rail")).toHaveScreenshot("contact-rail-step-1.png");
+
+    await section.locator("label.option").first().click();
+    await section.locator("[data-next]").click();
+    await expect(section.locator('[data-step-tab="1"]')).toHaveAttribute("aria-current", "step");
+    await expect(section.locator(".contact__rail")).toHaveScreenshot("contact-rail-step-2.png");
+  });
+
   test("kreator prowadzi przez trzy kroki i wraca", async ({ page }) => {
     await page.goto("/");
 
@@ -89,6 +109,65 @@ test.describe("Blok Contact", () => {
 
     // Pudełko nie urosło ani nie zmalało — kliknięcie w pole nie przesuwa strony.
     expect(await height()).toBe(idleHeight);
+  });
+
+  test("adres strony przechodzi bez protokołu i bez wypełnienia", async ({ page }) => {
+    /*
+     * `type="url"` odrzucało `invette.dev` — a dokładnie tak ludzie podają
+     * adres. Pole jest pomocnicze i nieobowiązkowe, więc walidacja formatu
+     * kosztowała wyłącznie porzucone zgłoszenia. Patrz spec → „Stany".
+     */
+    await page.goto("/");
+
+    const section = page.locator(SECTION);
+    await section.locator("label.option").first().click();
+    await section.locator("[data-next]").click();
+
+    const website = section.locator('input[name="website"]');
+    await expect(website).not.toHaveAttribute("required", /.*/);
+
+    await website.fill("invette.dev");
+    expect(await website.evaluate((input: HTMLInputElement) => input.checkValidity())).toBe(true);
+
+    // Puste pole też nie może zatrzymać kroku.
+    await website.fill("");
+    await section.locator('input[name="name"]').fill("Jan");
+    await section.locator('input[name="phone"]').fill("600100200");
+    await section.locator('input[name="email"]').fill("jan@example.com");
+    await section.locator("[data-next]").click();
+    await expect(section.locator('[data-step="2"]')).toBeVisible();
+  });
+
+  test("kwadracik zgody stoi w osi pierwszego wiersza tekstu", async ({ page }) => {
+    /*
+     * `align-items: start` na wierszu zgody (zgoda łamie się na dwa wiersze na
+     * wąskim ekranie) stawia kwadrat przy górnej krawędzi wiersza, nie w jego
+     * osi. Różnica to ~2 px — dokładnie tyle, ile widać jako „krzywy checkbox".
+     */
+    await page.goto("/");
+
+    const section = page.locator(SECTION);
+    await section.locator("label.option").first().click();
+    await section.locator("[data-next]").click();
+    await section.locator('input[name="name"]').fill("Jan");
+    await section.locator('input[name="phone"]').fill("600100200");
+    await section.locator('input[name="email"]').fill("jan@example.com");
+    await section.locator("[data-next]").click();
+
+    const offset = await section.locator("label.consent").evaluate((label) => {
+      const box = label.querySelector(".option__box")!.getBoundingClientRect();
+      const text = label.querySelector(".consent__label")!;
+      /*
+       * Oś PIERWSZEGO wiersza, nie środek pudełka etykiety: poniżej 768 px
+       * zgoda łamie się na dwa wiersze i środek pudełka leży wtedy 20 px niżej.
+       * Etykieta jest elementem flex, więc `getClientRects()` zwraca jeden
+       * prostokąt na całość — wiersz trzeba policzyć z `line-height`.
+       */
+      const line = Number.parseFloat(getComputedStyle(text).lineHeight);
+      return box.top + box.height / 2 - (text.getBoundingClientRect().top + line / 2);
+    });
+
+    expect(Math.abs(offset), `kwadrat rozjechał się o ${offset} px`).toBeLessThanOrEqual(1);
   });
 
   test("bez JS wszystkie kroki są widoczne, a pas kroków nie udaje nawigacji", async ({

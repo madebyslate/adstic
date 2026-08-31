@@ -41,6 +41,8 @@
      w tym bloku, stąd dwa osobne odcienie, a nie jeden z opacity. */
   --color-surface-rail: #0a0c0a;
   --color-surface-step: #131413;
+  /* Krok pod kursorem — to samo rozjaśnienie o 5 na kanale co przy kaflach. */
+  --color-surface-step-hover: #181918;
 
   /* Kafel ze ZDJĘCIEM w siatce WhoWeAre. Jaśniejszy od `raised`, ciemniejszy
      od `surface` — wartość z makiety, nie odcień wyliczony z istniejących. */
@@ -48,6 +50,13 @@
   /* Kafel z samą liczbą jest o stopień ciemniejszy — zdjęcie ma wychodzić
      do przodu, sucha statystyka ma zostawać w tle. */
   --color-surface-stat: #131413;
+  /*
+   * Te same dwa kafle pod kursorem. Rozjaśnienie o 5 na kanale — ten sam krok
+   * co `--faq-panel-bg-hover` i `--case-row-bg-hover`, żeby cała strona
+   * odpowiadała na kursor jednym gestem, a nie trzema różnymi.
+   */
+  --color-surface-card-hover: #1c1c1c;
+  --color-surface-stat-hover: #181918;
 
   --color-fg: #fefff1;
   --color-fg-muted: rgb(254 255 241 / 0.6);
@@ -95,6 +104,9 @@
   /* Obrys kafla WhoWeAre — kolor, nie krycie: na `--color-surface-card`
      przezroczysta biel dałaby inny odcień niż podany #181918. */
   --color-border-card: #181918;
+  /* Ten sam obrys pod kursorem. Kafel ma się ODDZIELIĆ od tła, więc rośnie
+     razem z tłem — inaczej rozjaśniona płyta zjadłaby własną krawędź. */
+  --color-border-card-hover: #2a2b2a;
   /* Włos pionowej kreski w tle WhoWeAre. */
   --color-border-hairline: #232423;
   /* Obrys pod nagłówkiem. Czysta biel, nie kremowy `--color-fg` — przy 6 %
@@ -215,6 +227,13 @@
   /* Kafel WhoWeAre. Klient podał też wariant `0 21.429px 40.357px` — do
      rozstrzygnięcia przy dostępie do Figmy, patrz WhoWeAre.spec.md. */
   --shadow-card: 0 18px 33.9px 0 rgb(0 0 0 / 0.25);
+  /*
+   * Ten sam kafel pod kursorem. Cień JEST podniesieniem: kafel nie rusza się
+   * z miejsca (jego `transform` należy do animacji wejścia i nadpisałby każdą
+   * wartość z hoveru — PLAYBOOK P-057), więc głębszy i dalej rzucony cień jest
+   * jedynym nośnikiem „uniosło się". Skala 1,3 × rozmycia i krycia bazowego.
+   */
+  --shadow-card-hover: 0 24px 44px 0 rgb(0 0 0 / 0.33);
 
   /* ── Ruch ───────────────────────────────────────────────────────────────── */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
@@ -228,6 +247,14 @@
    * (hover, focus), ta do choreografii wejścia.
    */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  /*
+   * Krzywa hoveru przycisku. Świadomie NIE `--ease-out-expo`: tamta zjada
+   * dystans w pierwszej ćwiartce czasu, więc kłąb koloru pod kursorem
+   * „strzela" i przez resztę animacji stoi. Ta rusza łagodnie, trzyma prędkość
+   * przez środek i wygasza — ruch widać przez cały czas trwania, w obie
+   * strony (wjazd i zwijanie), i o to chodzi w „smooth".
+   */
+  --ease-wipe: cubic-bezier(0.33, 0, 0.2, 1);
 
   /* ── Breakpointy ────────────────────────────────────────────────────────── */
   /* Te same szerokości, w których porównujemy z Figmą (AGENT-RULES §3.5). */
@@ -252,6 +279,13 @@
    * ruch kończy się i tak koło 300 ms — reszta to dojazd ostatnich pikseli.
    */
   --duration-reveal: 900ms;
+  /*
+   * Hover przycisku. Dłuższy od `--duration-slow`, bo kłąb pokonuje 1,25 ×
+   * szerokość przycisku — przy 450 ms i tym dystansie ruch czyta się jak
+   * przeskok, nie jak rozlanie. Etykieta przebarwia się w tym samym czasie,
+   * żeby kolor tekstu nie wyprzedzał płaszczyzny, która po niego jedzie.
+   */
+  --duration-wipe: 620ms;
 
   /* layout */
   /*
@@ -360,6 +394,23 @@
   --impact-heading-width: 34rem; /* 544 px */
 
   /*
+   * Kafle WhoWeAre pod kursorem. Zbliżenie kadru jest MNOŻNIKIEM, nie
+   * pikselami: kafel ma różną szerokość na każdym breakpoincie, a to samo
+   * 8 px na 200 px i na 45vw czyta się jak dwa różne ruchy.
+   */
+  --card-media-zoom: 1.04;
+  /*
+   * Poświata, która wchodzi na kafel ze statystyką. Ten sam kształt co poświata
+   * kroku w HowWeWork, ale słabsza — kafel jest mniejszy i stoi obok zdjęcia,
+   * więc mocniejsza plama wygrywałaby z twarzą obok.
+   */
+  --gradient-card-glow: radial-gradient(
+    120% 90% at 50% 0%,
+    rgb(255 0 85 / 0.1) 0%,
+    rgb(255 0 85 / 0) 62%
+  );
+
+  /*
    * FAQ. Podział kolumn jest proporcją, nie szerokościami: tekst po lewej ma
    * rosnąć wolniej niż lista pytań, bo to lista niesie treść.
    */
@@ -412,6 +463,22 @@
   /* Obwódka strzałki w kolorze tła strony. `box-shadow`, nie `border` —
      obwódka nie może zjadać 33 px średnicy z makiety. */
   --step-arrow-ring: 4px;
+  /*
+   * Poświata kroku pod kursorem. Wchodzi GÓRĄ kafla, bo tam stoi numer
+   * `/01` — czerwień pod kursorem ma wyglądać, jakby zapalił się właśnie on,
+   * a nie jakby kafel zmienił kolor.
+   */
+  --gradient-step-glow: radial-gradient(
+    110% 80% at 50% 0%,
+    rgb(255 0 85 / 0.14) 0%,
+    rgb(255 0 85 / 0) 60%
+  );
+  /*
+   * Skok strzałki między krokami. Procent WŁASNEJ szerokości ikony, nie px:
+   * strzałka ma 33 px na każdym ekranie, ale gdyby kiedyś urosła, ruch ma
+   * urosnąć razem z nią.
+   */
+  --step-arrow-nudge: 18%;
 
   /*
    * Ściana logotypów. Kafel jest kwadratem o stałym boku — to on ustala rytm
@@ -529,6 +596,15 @@
   --case-row-gap: 1.25rem; /* 20 px */
   /* Maksimum dla logotypu NA kaflu. Loga mają różne proporcje i idą w naturalnym
      rozmiarze — cap pilnuje tylko, żeby kwadratowy Apimel nie urósł nad resztę. */
+  /*
+   * Kafel realizacji pod kursorem: kadr się zbliża, tytuł unosi, strzałka
+   * dojeżdża po skosie w stronę, w którą pokazuje. Mnożnik i procenty, nie
+   * piksele — z tego samego powodu co przy `--card-media-zoom`.
+   */
+  --case-tile-zoom: 1.04;
+  --case-title-lift: 0.25rem; /* 4 px */
+  --case-arrow-nudge: 12%;
+
   --case-tile-logo-max-height: 4rem; /* 64 px */
   --case-tile-logo-max-width: 10rem; /* 160 px */
 
@@ -660,6 +736,43 @@
    * mają różną liczbę kropek w pionie (dwa pliki 32 × 32, dwa 29 × 29).
    */
   --why-icon-size: 2rem; /* 32 px */
+  /*
+   * Kropki tła rysunku. Malowane KOLOREM TREŚCI, nie szarością `#242624`
+   * z eksportu Figmy — i to jest sedno deszczu: głowa sopla ma być biała, a nie
+   * o pół tonu jaśniejszą szarością. Szarość z pliku jest tu WYNIKIEM, nie
+   * wartością: kremowa kropka przy `--dot-icon-grid-rest` składa się na tle
+   * strony (`--color-bg`, #0d0f0d) z powrotem w #242624.
+   *
+   * PUŁAPKA: para jest policzona pod KONKRETNE tło. Ikona na jaśniejszej płycie
+   * usiądzie w spoczynku wyżej niż w eksporcie.
+   */
+  --dot-icon-grid: var(--color-fg);
+  --dot-icon-grid-rest: 0.095;
+  /*
+   * Głowa sopla. Świadomie daleko od 1: deszcz jest tłem rysunku, nie jego
+   * treścią. Przy pełnym kryciu kropka tła jest tak samo jasna jak kropka
+   * kształtu — ikona na moment gubi to, co przedstawia, a same kropki robią
+   * się twarde i kłujące. 0,45 trzyma je wyraźnie za rysunkiem.
+   */
+  --dot-icon-grid-lit: 0.45;
+  /*
+   * Mruganie kropek KSZTAŁTU. Każda ma własną fazę i własne tempo (mnożnik
+   * `--dot-rate` z parsera), więc błyska ich naraz kilka i bez wzoru. To jest
+   * czas bazowy — realny okres kropki to on razy jej mnożnik.
+   */
+  --dot-icon-blink-duration: 2600ms;
+  /* Ile urasta poświata w błysku. */
+  --dot-icon-glow-swell: 1.35;
+  /*
+   * Jak mocno przygasa kropka kształtu w błysku. Im wyżej, tym mniejsza różnica
+   * koloru — 0,6 daje ciepły błysk, nie zamianę kremowej kropki w czerwoną.
+   */
+  --dot-icon-face-dim: 0.6;
+  /*
+   * Deszcz w warstwie TŁA. Jeden przelot sopla przez rysunek plus ciemna
+   * przerwa; kolumny startują w różnych momentach, więc nie padają równo.
+   */
+  --dot-icon-rain-duration: 3600ms;
   /* Szerokości, przy których akapity łamią się jak na zrzucie. */
   --why-intro-width: 32rem; /* 512 px — zdanie łamie się po „online channels.” jak na zrzucie */
   --why-item-text-width: 26rem; /* 416 px */
@@ -790,6 +903,17 @@
    */
   --contact-step-heading-size: 1.25rem; /* 20 px */
 
+  /*
+   * Przejście między krokami kreatora. Czas jest DŁUŻSZY od `--duration-base`:
+   * razem z przenikaniem treści jedzie wysokość płyty, a ruch krawędzi czyta
+   * się wolniej niż zanik napisu — przy 250 ms zamiana wygląda na szarpnięcie.
+   * Skrypt bloku czyta obie wartości z tego miejsca. Nie zakłada jednostki
+   * czasu — minifikator i tak przepisze `380ms` na `.38s` (PLAYBOOK P-058) —
+   * ale dystans musi zostać długością, którą rozumie `translate`.
+   */
+  --contact-step-swap-duration: 380ms;
+  --contact-step-swap-shift: 1.5rem; /* 24 px — krok ma podmienić treść, nie przejechać przez ekran */
+
   --contact-heading-size: 6rem; /* 96 px */
   --contact-heading-size-md: 4rem; /* 64 px */
   /* Szerokości, przy których nagłówek łamie się na dwa wiersze, a zdanie pod
@@ -891,6 +1015,28 @@
   /* Łuna pola pod fokusem. Ten sam czerwony co obrys, tylko rozlany — pole ma
      się „zapalić", a nie dostać drugą ramkę. */
   --shadow-contact-field-focus: 0 0 0 3px rgb(255 0 67 / 0.15);
+
+  /* ── Menu mobilne (Header) ─────────────────────────────────────────────────
+   * Poniżej 1024 px nawigacja zwija się do płyty otwieranej przyciskiem.
+   * Bez makiety — wartości są decyzją projektową, patrz Header.spec.md.
+   */
+  /* 44 px. Nie ze skali odstępów: to CEL DOTYKOWY, czyli wymiar wzięty
+     z WCAG 2.5.8 (min. 24 px) z zapasem, a nie krok rytmu strony. */
+  --menu-toggle-size: 2.75rem;
+  --menu-bar-width: 1.25rem; /* 20 px — długość kreski przycisku */
+  --menu-bar-thickness: 0.125rem; /* 2 px */
+  /* Rozstaw kresek liczony od środka przycisku: każda odjeżdża o połowę. */
+  --menu-bar-offset: 0.25rem; /* 4 px */
+  --menu-panel-bg: var(--color-header-bg);
+  --menu-panel-padding: var(--spacing-6); /* 32 px */
+  --menu-link-size: var(--text-2xl); /* 28 px */
+  --menu-link-gap: var(--spacing-4); /* 16 px */
+  /* Dystans, z którego płyta i jej pozycje dojeżdżają na miejsce. */
+  --menu-enter-shift: 0.75rem;
+  /* Krok kaskady pozycji menu. Osobny od `--reveal-step`, bo tamten opisuje
+     wejście STRONY, a ten reakcję na kliknięcie — musi być wyraźnie szybszy,
+     inaczej menu otwiera się dłużej, niż trwa decyzja o jego otwarciu. */
+  --menu-stagger: 40ms;
 
   /* aliasy `--space-*` wymagane przez AGENT-RULES §4 */
   --space-0: var(--spacing-0);

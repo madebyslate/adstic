@@ -349,6 +349,175 @@
     animation-play-state: paused;
   }
 
+  /* ── Ikony kropkowe ─────────────────────────────────────────────────────────
+   * Rysunki kropkowe (dziś: argumenty w WhyChooseUs) idą inline, bo kropki
+   * kształtu mają oddychać — do wnętrza pliku wstawionego przez `<img>` CSS nie
+   * ma dostępu. `ui/DotIcon.astro` wypisuje samą geometrię w trzech grupach,
+   * cała mechanika siedzi tutaj: przy 338 kółkach na stronie style w
+   * komponencie oznaczałyby klasę zasięgu doklejoną do każdego z nich.
+   *
+   * Trzy grupy = trzy warstwy z eksportu Figmy, w kolejności malowania z pliku:
+   * rozmyta poświata, na niej martwa siatka, na wierzchu kształt.
+   */
+  .dot-icon {
+    display: block;
+    /*
+      Szerokość podaje użytkownik komponentu przez `--dot-icon-width`. Ta sama
+      wartość przelicza rozmycie poświaty, bo pliki mają dwa viewBoxy (32 i 29)
+      renderowane na jedną szerokość — stała w px rozmywałaby połowę zestawu
+      o 10 % za mocno. Stąd `--dot-icon-blur-ratio` jako UŁAMEK, nie długość.
+    */
+    width: var(--dot-icon-width);
+    /* Wysokość wynika z viewBoxa — rysunki mają różną liczbę kropek w pionie. */
+    height: auto;
+  }
+
+  /*
+    Kropki tła. Ostre — w pliku też są. Malowane kolorem treści, a spoczynkowe
+    krycie sprowadza je do szarości z eksportu; powód stoi przy tokenach.
+  */
+  .dot-icon__grid {
+    fill: var(--dot-icon-grid);
+  }
+
+  .dot-icon__grid circle {
+    opacity: var(--dot-icon-grid-rest);
+  }
+
+  /*
+    Poświata: czerwona kopia kształtu, rozmyta. W pliku robił to
+    `feGaussianBlur` na grupie; jedna deklaracja CSS zastępuje `<defs>`
+    z identyfikatorem, który przy powtórzonej ikonie zderzyłby się sam ze sobą.
+  */
+  .dot-icon__glow {
+    fill: var(--color-brand);
+    filter: blur(calc(var(--dot-icon-blur-ratio) * var(--dot-icon-width)));
+  }
+
+  /* Kształt: te same pozycje co poświata, ostro, w kolorze treści. */
+  .dot-icon__face {
+    fill: var(--color-fg);
+  }
+
+  /*
+   * W rysunku dzieją się DWIE różne rzeczy i celowo nie są jednym mechanizmem.
+   *
+   * Kropki kształtu MRUGAJĄ LOSOWO: każda ma własną fazę i własne tempo
+   * (`--dot-phase`, `--dot-rate` — policzone z hasza pozycji w `dot-icon.ts`,
+   * nie wylosowane, żeby ten sam plik zawsze dawał ten sam rysunek). Błysk to
+   * przygaszenie kremowej kropki i jednoczesne spęcznienie czerwonej poświaty
+   * pod nią — przez moment widać czerwień spod spodu.
+   *
+   * Kropki tła PADAJĄ Z GÓRY NA DÓŁ: w kolumnie zapala się kolejno coraz niższa
+   * kropka, a że gasną wolniej, niż zapala się następna, za głową ciągnie się
+   * świetlny sopel. Każda kolumna startuje w innym momencie cyklu.
+   *
+   * Klatka `100%` MUSI być stanem spoczynkowym: reguła `prefers-reduced-motion`
+   * wyżej skraca każdą animację do 0,01 ms i wymusza jedną iterację, więc
+   * użytkownik z `reduce` — i każdy zrzut w testach wizualnych — ląduje
+   * dokładnie na niej (PLAYBOOK P-061). Klatka `0%` bywa inna i to jest
+   * świadome: w deszczu zapłon MA być cięciem, nie przejściem.
+   */
+  @keyframes dot-icon-glow-blink {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+
+    5% {
+      transform: scale(var(--dot-icon-glow-swell));
+    }
+
+    12% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes dot-icon-face-blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    5% {
+      opacity: var(--dot-icon-face-dim);
+    }
+
+    12% {
+      opacity: 1;
+    }
+  }
+
+  /*
+   * Zapłon na cięciu, potem gaśnięcie w czterech krokach. Gaśnięcie jednej
+   * kropki nachodzi na zapłon kilku następnych, więc w kolumnie stoi cała smuga
+   * z gradientem — sopel — a nie jeden punkt wędrujący w dół. Skrócenie tego
+   * ogona zamienia deszcz w rozsypane iskry: głowa nadal leci, ale nie widać,
+   * skąd i dokąd.
+   */
+  @keyframes dot-icon-rain {
+    0% {
+      opacity: var(--dot-icon-grid-lit);
+    }
+
+    8% {
+      opacity: 0.3;
+    }
+
+    16% {
+      opacity: 0.2;
+    }
+
+    24% {
+      opacity: 0.13;
+    }
+
+    32%,
+    100% {
+      opacity: var(--dot-icon-grid-rest);
+    }
+  }
+
+  .dot-icon__glow circle,
+  .dot-icon__face circle,
+  .dot-icon__grid circle {
+    /* Kropka skaluje się względem SWOJEGO środka, nie środka viewBoxa. */
+    transform-box: fill-box;
+    transform-origin: center;
+    animation-iteration-count: infinite;
+  }
+
+  /*
+   * Okres kropki kształtu to czas bazowy RAZY jej własny mnożnik — bez tego
+   * wszystkie mrugają z tym samym okresem i po jednym obrocie układ się
+   * powtarza, co oko czyta jako rytm. Opóźnienie liczy się od TEGO okresu,
+   * nie od bazowego, inaczej faza znaczyłaby co innego dla każdej kropki.
+   */
+  .dot-icon__glow circle,
+  .dot-icon__face circle {
+    --dot-period: calc(var(--dot-icon-blink-duration) * var(--dot-rate));
+
+    animation-duration: var(--dot-period);
+    animation-timing-function: var(--ease-in-out-token);
+    animation-delay: calc(var(--dot-phase) * var(--dot-period) * -1);
+  }
+
+  .dot-icon__glow circle {
+    animation-name: dot-icon-glow-blink;
+  }
+
+  .dot-icon__face circle {
+    animation-name: dot-icon-face-blink;
+  }
+
+  /* Deszcz jedzie `linear` — gaśnięcie sopla ma być równe, nie wyhamowane. */
+  .dot-icon__grid circle {
+    animation-name: dot-icon-rain;
+    animation-duration: var(--dot-icon-rain-duration);
+    animation-timing-function: linear;
+    animation-delay: calc(var(--dot-phase) * var(--dot-icon-rain-duration) * -1);
+  }
+
   /* ── Sterowane scrollem ─────────────────────────────────────────────────────
    * Warstwa, w której ruch NIE jest zdarzeniem („sekcja weszła"), tylko funkcją
    * pozycji scrolla — parallaxa tła, dojazd kadru. `animation-timeline: view()`
@@ -443,6 +612,7 @@
  * Wywołujący podaje wyłącznie kolory:
  *   --btn-surface-hover  płaszczyzna, która wjeżdża (domyślnie marka)
  *   --btn-fg-hover       kolor etykiety, gdy już wjechała
+ *   --btn-border-hover   obwódka po najechaniu (domyślnie płaszczyzna)
  */
 .btn-wipe {
   position: relative;
@@ -456,7 +626,9 @@
   /* `clip`, nie `hidden`: to samo przycięcie (z zaokrągleniem włącznie), bez
      robienia z przycisku kontenera przewijania. */
   overflow: clip;
-  transition: color var(--duration-base) var(--ease-standard);
+  transition:
+    color var(--duration-wipe) var(--ease-wipe),
+    border-color var(--duration-wipe) var(--ease-wipe);
 }
 
 .btn-wipe::before {
@@ -495,13 +667,21 @@
    * od skali.
    */
   transform: translate(-50%, -50%) scale(0);
-  transition: transform var(--duration-slow) var(--ease-out-expo);
+  transition: transform var(--duration-wipe) var(--ease-wipe);
 }
 
 .btn-wipe:hover,
 .btn-wipe:focus-visible,
 /* Gdy przycisk jest tylko wyglądem większego linku, fokus ląduje na linku. */
 a:focus-visible .btn-wipe {
+  /*
+   * Obwódka razem z płaszczyzną. Przycisk z ramką (np. „Wstecz" w formularzu)
+   * niesie `.btn-wipe` na sobie, a kłąb koloru siedzi w pudełku dopełnienia —
+   * więc ramka zostawała na wierzchu jako obcy pierścień wokół czerwieni.
+   * Domyślnie zlewa się z wjeżdżającą płaszczyzną, zamiast znikać do
+   * przezroczystości: przezroczysta ramka pokazałaby prześwit tła sekcji.
+   */
+  border-color: var(--btn-border-hover, var(--btn-surface-hover, var(--color-brand)));
   color: var(--btn-fg-hover, var(--color-fg));
 }
 

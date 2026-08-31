@@ -871,3 +871,173 @@ test cokolwiek zmierzy. Przy okazji staje marquee i orbita, czyli znika ostatnie
 NIE dociera do przeglądarki — `matchMedia` w stronie zwraca `false`, a test
 przechodzi, nie sprawdzając niczego. Stąd fixture na `page`, nie opcja.
 
+## 2026-08-31 — menu mobilne na `popover`, CTA znika z paska poniżej 1024 px
+
+**Decyzja.** Poniżej 1024 px nawigacja i CTA przenoszą się do płyty otwieranej
+przyciskiem w pasku. Płyta stoi na atrybucie `popover` — zero JS-u — i zaczyna
+się POD paskiem, więc ten sam przycisk ją otwiera i zamyka. Pigułka „Contact Us"
+nie zostaje obok przycisku, tylko schodzi do menu.
+
+**Powód dla `popover`, nie skryptu.** Przeglądarka daje z niego komplet
+zachowań, które ręcznie kosztują ~1,5 KB i cztery okazje do błędu: warstwę
+wierzchnią (żaden `z-index` sekcji jej nie przykryje), `Esc`, klik poza płytą,
+powrót fokusu na przycisk, wejście tabem do środka i relację przycisk ↔ płyta
+w drzewie dostępności. Nagłówek zostaje przy 0 KB JS-u. Checkbox hack dałby
+zerowy JS też, ale bez `Esc`, bez powrotu fokusu i z etykietą udającą przycisk.
+
+**Powód dla zniknięcia CTA.** Przy 390 px logo, pigułka i cel dotykowy 44 px
+zjadają cały wiersz bez zapasu na dłuższą etykietę. Pasek nie jest lepki, więc
+CTA i tak nie towarzyszy scrollowi — to samo wezwanie stoi kilkaset pikseli
+niżej w hero. Gdy pasek stanie się lepki, pytanie wraca (otwarte w
+`Header.spec.md`).
+
+**Konsekwencja dla testów.** Pozycje nawigacji stoją teraz na stronie DWA razy,
+więc `header nav a` łapie je podwójnie: test stopki porównuje się z paskiem
+(`nav[aria-label="Nawigacja główna"]`), a zgodność paska z płytą jest osobnym
+testem w `header.spec.ts`. Symetria marginesów mierzy na mobile IKONĘ przycisku,
+nie jego pudełko — pudełko to cel dotykowy 44 px i wystaje poza rytm paska
+celowo (ujemny margines).
+
+**Pułapki, które to kosztowało.** `PLAYBOOK.md` P-055 (stanu popovera nie widać
+z przycisku, trzeba `html:has()`) i P-056 (`transition-delay` przeżywa
+`prefers-reduced-motion`).
+
+## 2026-08-31 — hover w sekcjach nieklikalnych: odpowiedź, nie afordancja
+
+**Decyzja.** `WhoWeAre`, `HowWeWork` i `CaseStudies` odpowiadają na kursor.
+W `CaseStudies` — jedynej z nich, gdzie kafle SĄ linkami — hover jest
+afordancją: kadr się zbliża, tytuł unosi, strzałka dojeżdża po skosie z tej
+strony, w którą pokazuje. W dwóch pozostałych kafle nie prowadzą nigdzie
+(klient nie podał celów), więc hover jest wyłącznie odpowiedzią materiału:
+płyta jaśnieje o 5 na kanale, wchodzi czerwona poświata, ikona statystyki się
+zapala, opis kroku dochodzi do pełnego krycia. Żaden z tych kafli nie zmienia
+kursora ani nie pokazuje strzałki — nic nie obiecuje kliknięcia, którego nie ma.
+
+**Powód.** Strona jest jednym długim scrollem z choreografią wejść, ale po
+wejściu zastyga: wszystko, co się rusza, robi to samo z siebie (marquee, orbita,
+światło na kresce), a nic nie odpowiada na rękę. Trzy sekcje środkowe są
+najdłuższe i najbardziej „czytelnicze", więc to tam brak reakcji czytał się jako
+zrzut ekranu, a nie strona.
+
+**Powód dla progu 5 na kanale.** Ten sam krok co `--faq-panel-bg-hover`
+i `--case-row-bg-hover`, które były w projekcie wcześniej. Cała strona ma
+odpowiadać na kursor JEDNYM gestem — trzy różne siły rozjaśnienia czyta się jak
+trzy różne systemy.
+
+**Powód dla rozjaśnienia opisu kroku.** 40 % krycia daje ≈ 3,1:1, czyli poniżej
+AA (otwarty dług w `HowWeWork.spec.md`). Hover go nie zamyka — dotyk hoveru nie
+ma — ale w miejscu, w którym użytkownik faktycznie czyta, tekst staje się pełny.
+Dług zostaje do rozstrzygnięcia z Figmą.
+
+**Czego świadomie NIE ma.** Kafle się nie unoszą `transform`em. Po pierwsze nie
+mogą: niosą klasy wejścia, których wypełnienie zjada każdy `transform` z hoveru
+(`PLAYBOOK.md` P-057). Po drugie nie powinny — w `HowWeWork` strzałka siedzi
+okrakiem na prześwicie i przesunięty kafel rozerwałby pas, który ma się czytać
+jako jedna płyta. Rolę podniesienia gra cień (`--shadow-card-hover`), a ruch
+dostają dzieci kafla, które własnej animacji nie mają.
+
+**Redukcja ruchu.** Zmiany koloru zostają — niosą informację „element reaguje",
+a nie ruch. Znikają wyłącznie dystanse: zbliżenia i dojazdy, bo skrócone do
+0,01 ms przez regułę globalną byłyby przeskokiem, czyli dalej ruchem.
+`tests/visual/motion.spec.ts` → „redukcja ruchu zostawia kolory, zabiera drogę".
+
+## 2026-08-31 — kreator kontaktu przenika kroki, a płyta dojeżdża wysokością
+
+**Decyzja.** Zamiana kroku w `Contact` przestaje być natychmiastowa. Odchodzący
+krok zanika i cofa się, wchodzący przypływa z przeciwnej strony, a wysokość
+płyty jedzie ze starej wartości do nowej — wszystko na
+`--contact-step-swap-duration` (0,38 s) i `--ease-out-expo`. Gradient aktywnego
+kafla w pasie kroków przestał być tłem taba i jest osobną warstwą z `opacity`,
+żeby też dojeżdżał, zamiast przeskakiwać. Przenikanie kroków jest sekwencyjne
+(odchodzący gaśnie, dopiero potem wchodzi następny), bo oba mają tekst
+w tym samym miejscu.
+
+**Powód.** Poprzednia wersja podmieniała `hidden` w jednej klatce. Kroki różnią
+się wysokością (przegląd w kroku 3 jest o kilkadziesiąt pikseli wyższy od listy
+celów), więc razem z treścią skakały przyciski pod formularzem — czytało się to
+jak przeładowanie kawałka strony, nie jak następny krok tego samego formularza.
+
+**Powód dla animowania wysokości.** To własność układu, więc §6 mówi „nie".
+Wyjątek jest świadomy i wąski: ruch odpala się na kliknięcie (nie na scroll),
+trwa 0,38 s i dotyczy jednego pudełka, które w tym czasie stoi. Przenikanie
+samej treści bez wysokości daje efekt gorszy niż brak animacji — płynny tekst
+na szarpiącej się płycie. Odrzucone: `interpolate-size` (za świeże wsparcie),
+skalowanie płyty (rozjeżdża tekst), wysokość zamrożona do najwyższego kroku
+(pusta przestrzeń pod krokiem 1).
+
+**Fokus.** Zostaje tam, gdzie był — na nagłówku kroku, od razu po kliknięciu —
+ale dostaje `preventScroll: true`. Bez tego przeglądarka dociąga stronę do
+pozycji celu liczonej w połowie ruchu, czyli szarpie scrollem. Poprzedni zapis
+w `Contact.spec.md` („krok podmienia się natychmiast, żeby fokus nie wędrował
+po animowanym elemencie") traci ważność: problemem nie był animowany element,
+tylko dociąganie widoku.
+
+**Redukcja ruchu.** Skrypt sam pyta `matchMedia` — globalna reguła skraca
+animacje CSS, a te jadą na Web Animations. Przy `reduce` krok podmienia się
+natychmiast, dokładnie jak przedtem, i tego pilnuje osobny test.
+
+**Koszt.** Skrypt bloku urósł z 0,8 do 1,5 KB gzip (zmierzone na buildzie).
+Zero nowych zależności i zero nowych requestów.
+
+## 2026-08-31 — ikony kropkowe idą inline: losowe mruganie i deszcz w tle
+
+**Decyzja.** Cztery ikony argumentów w `WhyChooseUs` przestają być plikami
+w `<img src>`. `ui/DotIcon.astro` czyta je przy buildzie (`lib/dot-icon.ts`),
+rozkłada na trzy warstwy z eksportu i wypisuje jako `<circle>` wprost
+w dokument. Kropki kształtu mrugają LOSOWO (kilka naraz, każda z własną fazą
+i własnym tempem), a kropki tła padają Z GÓRY NA DÓŁ jak deszcz, z gasnącą
+smugą za głową. Zamyka to otwarte pytanie 3 z `WhyChooseUs.spec.md`.
+
+**Powód.** Do wnętrza pliku wstawionego przez `<img>` CSS nie ma dostępu — to
+dla przeglądarki jeden nieprzezroczysty obrazek. Bez inline dałoby się animować
+wyłącznie CAŁĄ ikonę (pulsujący `drop-shadow`), a to jest pulsujący blask, nie
+ruch pojedynczych kropek.
+
+**Co tu jest naprawdę ważne.** Pliki z Figmy mają TRZY warstwy na wspólnych
+współrzędnych: tło `#242624` (ostre), poświata `#FF0043` (rozmyta pod
+`feGaussianBlur`) i kształt `#FEFFF1` (ostry, na tych samych pozycjach co
+poświata). Czerwień jest podkładem kremowej kropki, nie osobnym rysunkiem.
+Pierwsze podejście spłaszczyło to do jednej listy kropek i rozmyło całość —
+rysunek zamienił się w czerwoną papkę, a testy tego NIE złapały, bo ikona ma
+32 px i różnica ginie pod tolerancją snapshotu. Stąd osobny test na warstwy
+i wpis P-062 w `PLAYBOOK.md`.
+
+**Dwa ruchy, nie jeden.** Mruganie kształtu i deszcz w tle to osobne animacje
+z osobnymi czasami, bo są odpowiedzią na dwa różne pytania: „które kropki teraz
+świecą" i „skąd dokąd leci ruch". Jeden wspólny mechanizm (ukośny pas przez oba
+zbiory) był drugą wersją tej animacji i wyglądał jak pulsowanie całej ikony.
+
+**Losowość jest policzona, nie wylosowana.** Fazy i tempa wychodzą z hasza
+współrzędnych. `Math.random()` przy buildzie dałby inny układ w każdym
+przebiegu, czyli różnicę w snapshotach bez żadnej zmiany w kodzie.
+
+**Rachunek.** 49 KB w czterech requestach (3,7 KB po gzipie) → 27,9 KB w HTML,
+**2,1 KB po gzipie, zero requestów**. Lighthouse po zmianie: performance 0,98,
+LCP 2,2 s, TBT 0 ms, CLS 0, 19 requestów. Oszczędność bierze się stąd, że eksport
+niósł 25 osobnych filtrów rozmycia w samym `contact.svg`, a inline zastępuje je
+jedną deklaracją `filter: blur()` na grupie poświaty.
+
+**Kropki tła są malowane kolorem treści, nie szarością z pliku.**
+`--dot-icon-grid` (`--color-fg`) przy `--dot-icon-grid-rest` (0,095) składa się
+na `--color-bg` z powrotem w `#242624` z eksportu. Różnica istnieje po to, żeby
+głowa sopla mogła być biała — rozjaśnić da się tylko coś, co w spoczynku nie
+stoi na pełnym kryciu. Cena: para jest policzona pod konkretne tło i na
+jaśniejszej płycie usiądzie wyżej niż w eksporcie. Alternatywa (animowanie
+`fill`) schodzi z `opacity`/`transform` wbrew §6 i kosztuje przemalowanie na
+każdej klatce.
+
+**Odrzucone.** (a) `animation-timeline: view()` — kosztuje 0 poza kadrem, ale
+wtedy ikony żyją tylko wtedy, gdy ktoś scrolluje. (b) Ruch tylko przy wejściu
+sekcji + powtórka na hover — najtańsze, ale to zdarzenie, nie życie rysunku.
+(c) Pulsujący `drop-shadow` na `<img>` — bez zmiany assetów, ale bez ruchu
+pojedynczych kropek.
+
+**Koszt, który jest świadomy.** 338 animacji `opacity`/`transform` chodzi
+w pętli także wtedy, gdy blok jest poza kadrem — obserwator wejść ustawia
+`data-inview` raz i się odpina, więc nie ma czym tego bramkować bez drugiego
+mechanizmu. To cztery rysunki po 32 px; przy większej liczbie ikon wróciłby
+wariant (a).
+
+**Odstępstwo od eksportu.** 25 kropek w `contact.svg` niosło własny
+`feDropShadow` `rgb(255 53 53 / 0.25)`, którego pozostałe kropki tego samego
+rysunku nie mają — artefakt eksportu, nie decyzja projektowa. Nie odtworzony.

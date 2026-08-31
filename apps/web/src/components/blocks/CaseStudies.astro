@@ -219,6 +219,22 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
     width: 100%;
     height: 100%;
     object-fit: cover;
+    /*
+      Zbliżenie kadru pod kursorem. Rusza się ZDJĘCIE, nie kafel: kafel przycina
+      (`overflow: hidden`), więc jego krawędzie, logo i tytuł stoją w miejscu,
+      a rośnie tylko to, co pod nimi. Powiększenie kafla przesuwałoby sąsiadów
+      w siatce — i tak nie zadziałałoby, bo `<li>` niesie animację wejścia
+      wypełniającą `transform` (PLAYBOOK P-057).
+
+      `scale` osobną własnością, nie w `transform` — nie kasuje niczego, co
+      ktoś dopisze obok, i idzie tą samą szybką ścieżką kompozytora.
+    */
+    transition: scale var(--duration-slow) var(--ease-standard);
+  }
+
+  .tile:hover > :global(img),
+  .tile:focus-visible > :global(img) {
+    scale: var(--case-tile-zoom);
   }
 
   /*
@@ -291,12 +307,33 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
     inset-inline-end: var(--space-5);
     background-color: var(--case-arrow-bg-media);
     opacity: 0;
-    transition: opacity var(--duration-fast) var(--ease-standard);
+    /*
+      Strzałka nie tylko się pojawia — dojeżdża po skosie z tej strony, w którą
+      pokazuje (w prawo w górę), więc stan spoczynku jest jej przesunięciem
+      startowym. Ruch jest krótszy niż zbliżenie kadru (`fast` vs `slow`):
+      afordancja ma być natychmiast, kadr może dochodzić.
+    */
+    translate: calc(-1 * var(--case-arrow-nudge)) var(--case-arrow-nudge);
+    transition:
+      opacity var(--duration-fast) var(--ease-standard),
+      translate var(--duration-fast) var(--ease-standard);
   }
 
   .tile:hover .tile__arrow,
   .tile:focus-visible .tile__arrow {
     opacity: 1;
+    translate: 0 0;
+  }
+
+  .tile__title {
+    /* Deklaracje wyglądu tytułu są niżej; tu tylko jego ruch pod kursorem. */
+    transition: translate var(--duration-base) var(--ease-standard);
+  }
+
+  /* Tytuł unosi się o włos — tyle, żeby kafel „odetchnął", nie żeby skoczył. */
+  .tile:hover .tile__title,
+  .tile:focus-visible .tile__title {
+    translate: 0 calc(-1 * var(--case-title-lift));
   }
 
   .tile__title {
@@ -345,6 +382,13 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: scale var(--duration-base) var(--ease-standard);
+  }
+
+  /* To samo zbliżenie co na kaflu — wiersz jest tą samą realizacją, mniejszą. */
+  .row:hover .row__logo :global(img),
+  .row:focus-visible .row__logo :global(img) {
+    scale: var(--case-tile-zoom);
   }
 
   .row__title {
@@ -367,6 +411,14 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
       (PLAYBOOK P-015). Zostaje sam kolor.
     */
     background-color: var(--color-control-ghost);
+    /* Ten sam skos co na kaflu — z tą różnicą, że w wierszu strzałka jest
+       widoczna zawsze, więc rusza się dopiero pod kursorem. */
+    transition: translate var(--duration-fast) var(--ease-standard);
+  }
+
+  .row:hover .row__arrow,
+  .row:focus-visible .row__arrow {
+    translate: var(--case-arrow-nudge) calc(-1 * var(--case-arrow-nudge));
   }
 
   /* ── Breakpointy ────────────────────────────────────────────────────────── */
@@ -382,10 +434,11 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
 
     /*
       Na wąskim ekranie strzałka nie ma jak się „pojawić" — nie ma hovera.
-      Stąd stan domyślny widoczny, nie ukryty.
+      Stąd stan domyślny widoczny i na swoim miejscu, nie ukryty i odsunięty.
     */
     .tile__arrow {
       opacity: 1;
+      translate: 0 0;
     }
 
     .row__title {
@@ -401,6 +454,28 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
     .tile__arrow,
     .row {
       transition-duration: 0.01ms;
+    }
+
+    /*
+      Reguła globalna skraca przejścia do 0,01 ms, ale zbliżenie i dojazd
+      zostałyby wtedy PRZESKOKIEM — a to nadal ruch. Strzałka pojawia się dalej
+      (to informacja), tylko już bez drogi do przebycia.
+    */
+    .tile__arrow,
+    .tile:hover .tile__arrow,
+    .tile:focus-visible .tile__arrow,
+    .row:hover .row__arrow,
+    .row:focus-visible .row__arrow,
+    .tile:hover .tile__title,
+    .tile:focus-visible .tile__title {
+      translate: 0 0;
+    }
+
+    .tile:hover > :global(img),
+    .tile:focus-visible > :global(img),
+    .row:hover .row__logo :global(img),
+    .row:focus-visible .row__logo :global(img) {
+      scale: 1;
     }
   }
 </style>

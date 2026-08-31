@@ -1124,8 +1124,414 @@ test weryfikujesz, cofając poprawkę i sprawdzając, że pada.
 zmienia jego kontekst układania na stałe** — po dołożeniu choreografii sprawdza
 się wszystko, co z tego elementu wystaje.
 
+### P-053 — ramka przycisku zostaje pierścieniem nad wjeżdżającym tłem hoveru
+
+**Objaw.** Efekt hoveru rozlewający kolor z `::before` wygląda dobrze na
+wszystkich przyciskach poza jednym: tym z widoczną ramką. Po najechaniu środek
+jest czerwony, a wokół zostaje szara obwódka — czyta się jak niedokończony
+stan, nie jak wariant. U nas: „Wstecz" w kroku 2 formularza (`.button--ghost`).
+
+**Przyczyna.** Dwie rzeczy naraz. Po pierwsze, dziecko `position: absolute`
+rozciąga się na **pudełko dopełnienia**, a `border` leży poza nim — kłąb
+fizycznie nie ma jak przykryć ramki. Po drugie, ramka jest deklarowana
+w `<style>` komponentu, a reguła hoveru w `global.css` poza warstwami (P-051):
+po doklejeniu przez Astro atrybutu zakresu obie mają swoistość (0,2,0) i wynik
+zależy od kolejności arkuszy, czyli od przypadku.
+
+**Fix.** Ramka jedzie razem z płaszczyzną, w tej samej krzywej i czasie:
+
+```css
+/* global.css, poza warstwami */
+.btn-wipe { transition: color …, border-color …; }
+.btn-wipe:hover { border-color: var(--btn-border-hover, var(--btn-surface-hover, var(--color-brand))); }
+
+/* w komponencie z ramką — remis swoistości rozstrzygamy na miejscu */
+.button--ghost:hover { border-color: var(--btn-surface-hover, var(--color-brand)); }
+```
+
+Zlanie z płaszczyzną, **nie** `transparent`: przezroczysta ramka pokazuje
+prześwit płyty sekcji, czyli zamienia szary pierścień na ciemny.
+
+**Przy okazji, o krzywej.** Hover kontrolki i wejście sekcji to dwa różne
+zadania. `--ease-out-expo` (wejścia) zjada dystans w pierwszej ćwiartce czasu —
+na przycisku czyta się jak przeskok, bo kłąb pokonuje 1,25 × jego szerokość.
+Dlatego osobne tokeny: `--ease-wipe` (łagodny start, prędkość przez środek)
+i `--duration-wipe` 620 ms. Etykieta przebarwia się w TYM SAMYM czasie, żeby
+kolor tekstu nie wyprzedzał płaszczyzny, która po niego jedzie.
+
+**Wyłapuje.** ✅ `tests/visual/motion.spec.ts`, „ramka przycisku wsiąka w kłąb".
+Sprawdzony przez cofnięcie poprawki — bez niej pada.
+
+**PUŁAPKA W WERYFIKACJI (znowu P-041/P-038).** Pierwsze cofnięcie poprawki
+testu **nie** wywróciło: `reuseExistingServer` podpiął się pod demona
+`astro preview` z poprzedniej sesji, który serwował STARY `dist`. Zanim uznasz,
+że test łapie regresję, ubij port: `lsof -ti :4321 | xargs kill`.
+
+**Do startera.** Wpis + test. Reguła ogólna: klasa niosąca tło hoveru
+w `::before` nie przykrywa ramki elementu, na którym siedzi — albo ramki nie
+ma, albo animujesz ją razem z tłem.
+
 ### Cel — jak mierzymy, że starter działa
 
 Od `git init` do zdeployowanego szkieletu z jednym blokiem, przechodzącym
 `verify` + Lighthouse w kontenerze: **jedna sesja**. Dziś, licząc od zera, jest
 to kilka dni — i to jest liczba, którą starter ma zbić.
+
+---
+
+### P-054 — `astro dev` serwuje stary scoped CSS komponentu, HTML jest już nowy
+
+**Objaw.** Zmieniasz `<style>` w komponencie `.astro`, przeładowujesz stronę
+i nic. Nowy **markup** jest na stronie, nowe reguły też są w źródle strony
+(`curl | grep` je znajduje), ale przeglądarka ich nie stosuje: element ma
+`data-astro-cid-…`, reguła ma ten sam `data-astro-cid-…`, a `getComputedStyle`
+zwraca wartości sprzed zmiany. `el.matches(r.selectorText)` po wszystkich
+`document.styleSheets` nie daje **żadnego** trafienia — arkusza z tymi regułami
+po prostu nie ma w dokumencie.
+
+**Przyczyna.** W dev Astro nie wstawia scoped CSS-u inline. Wstrzykuje go moduł
+`/src/…/Komponent.astro?astro&type=style&index=0&lang.css`, a ten potrafi
+zostać w cache'u transformacji Vite'a i nie unieważnić się przy edycji stylu.
+Zapytanie o ten adres wprost pokazuje starą treść — i to jest test rozstrzygający.
+Mylące jest to, że tokeny z `packages/tokens/tokens.css` **aktualizują się**
+normalnie, bo to zwykły globalny arkusz: część efektu zmiany widać (bo przeszła
+przez token), a część nie, więc wygląda to jak błąd w CSS-ie komponentu.
+
+**Fix.** Restart dev servera. Zanim zaczniesz debugować własny selektor:
+`curl -s "http://localhost:PORT/src/components/…/X.astro?astro&type=style&index=0&lang.css" | grep NOWA_KLASA`
+— pusto znaczy, że problem jest w serwerze, nie w kodzie.
+
+**Wyłapuje.** Nic automatycznego. Miarodajny jest build: `pnpm build` inline'uje
+scoped CSS do HTML-a, więc pomiar na `dist/` (Playwright na statycznym serwerze)
+pokazuje prawdę. Reguła: **geometrię mierzysz na zbudowanej stronie, nie na dev
+serverze.**
+
+**Do startera.** Skrypt pomiarowy celujący w `dist/`, nie w `:4321`.
+
+---
+
+### P-055 — stanu popovera nie da się odczytać z przycisku, który go otwiera
+
+**Objaw.** Menu na `popover` + `popovertarget` działa: otwiera się, zamyka
+`Esc`-em i kliknięciem obok, fokus wraca na przycisk. Ale CSS ma pokazać
+otwarcie na SAMYM przycisku (kreski w krzyż) i nie ma czego złapać.
+`.header__toggle[aria-expanded='true']` nie trafia nigdy, mimo że inspektor
+pokazuje przy przycisku `expanded` w panelu dostępności, a `getAttribute`
+w konsoli zwraca `null`. Wygląda to jak literówka w selektorze.
+
+**Przyczyna.** `aria-expanded` wywołującego popover jest **wyliczane przez
+przeglądarkę** — mapowanie implicit ARIA, obecne w drzewie dostępności, nieobecne
+w DOM-ie. CSS widzi wyłącznie atrybuty, więc nie ma jak go zobaczyć. Tak samo
+`:popover-open` opisuje PŁYTĘ, a nie przycisk, i nie da się z płyty wrócić
+selektorem do wywołującego — `popovertarget` idzie w jedną stronę.
+
+**Fix.** Stan czyta się z korzenia dokumentu, w drugą stronę:
+
+```css
+:global(html:has(#site-menu:popover-open)) .header__bar { rotate: 45deg; }
+```
+
+Tą samą drogą idzie blokada scrolla tła (`overflow: hidden` na `html`) — popover
+nie jest modalem, więc nie dostaje jej za darmo, a `::backdrop` niczego nie
+blokuje. W Astro selektor MUSI być w `:global()`: scoper dopisałby
+`data-astro-cid-…` do `html`, którego w komponencie nie ma, i reguła nie trafiłaby
+nigdzie.
+
+**Wyłapuje.** `tests/visual/header.spec.ts` → „przy otwartym menu strona pod
+spodem nie scrolluje" (czyta `overflow` z korzenia) i snapshot otwartego menu,
+na którym widać krzyż zamiast kresek.
+
+**Do startera.** Wzorzec „popover jako menu mobilne" z tą regułą w komplecie:
+za zero KB JS-u dostaje się warstwę wierzchnią, `Esc`, klik obok, powrót fokusu
+i wejście tabem do środka — ale stan do ostylowania trzeba wziąć z `html:has()`,
+nie z przycisku.
+
+---
+
+### P-056 — `transition-delay` przeżywa `prefers-reduced-motion`
+
+**Objaw.** Menu z kaskadą pozycji „nie animuje się" pod redukcją ruchu, ale
+ostatnia pozycja i tak pojawia się z wyraźnym opóźnieniem. Globalna reguła
+redukcji jest na miejscu i działa dla wszystkiego innego.
+
+**Przyczyna.** Reguła z `global.css` zeruje `animation-delay` i skraca
+`transition-duration`, ale `transition-delay` zostaje nietknięty — a kaskada
+wejścia zrobiona na przejściach (bo stan bierze się z `:popover-open`, nie
+z klatek) siedzi właśnie tam. Efekt: ruchu nie ma, czekanie jest.
+
+**Fix.** Krok kaskady jako token liczony lokalnie i zerowany przy redukcji:
+
+```css
+@media (prefers-reduced-motion: reduce) { .header__menu { --menu-stagger: 0ms } }
+```
+
+**Wyłapuje.** `tests/visual/motion.spec.ts` → „menu mobilne nie każe czekać na
+kaskadę pozycji" (bez redukcji `transition-delay` ostatniej pozycji to 0,24 s,
+z redukcją musi być 0 s).
+
+**Do startera.** Dopisać `transition-delay: 0ms` do globalnego bloku redukcji
+ruchu — dziś zeruje tylko opóźnienia animacji.
+
+---
+
+### P-057 — hover nie rusza elementu, który ma na sobie animację wejścia
+
+**Objaw.** Kafel ma `transition: transform …` i regułę `:hover { translate: … }`.
+W dev-toolsach reguła jest, nie jest przekreślona, swoistość się zgadza —
+a kafel stoi. Żadnego błędu, żadnego ostrzeżenia. Ta sama reguła na sąsiednim
+elemencie działa.
+
+**Przyczyna.** Element niesie klasę wejścia (`.reveal` i pokrewne), a te mają
+`animation-fill-mode: both`. Po zakończeniu animacja WYPEŁNIA swoją klatkę
+końcową w nieskończoność, a wartość z wypełnienia animacji leży w kaskadzie
+WYŻEJ niż każda zwykła deklaracja — także niż `!important` z arkusza autora.
+Klatka końcowa `reveal-rise` to `transform: none`, więc każdy `transform`,
+`translate`, `scale` i `rotate` z hoveru jest bezgłośnie zjadany. To samo
+dotyczy `opacity`, bo i ona jest w tych klatkach.
+
+Dev-toolsy tego nie pokazują: reguła nie jest przegrana w kaskadzie stylów,
+tylko nadpisana przez warstwę animacji, której panel „Styles" nie rysuje.
+
+**Fix.** Hover gospodarza gra tym, czego animacja wejścia NIE dotyka — tłem,
+obrysem, cieniem, kolorem. Ruch dostaje DZIECKO, które własnej animacji nie ma:
+
+```css
+.card       { transition: box-shadow var(--duration-base) var(--ease-standard) }
+.card:hover { box-shadow: var(--shadow-card-hover) }   /* podniesienie = cień */
+.card:hover .card__media img { scale: var(--card-media-zoom) }  /* ruch: dziecko */
+```
+
+Przy okazji wychodzi to lepiej: dziecko rusza się wewnątrz przycinającego
+rodzica, więc kafel nie rozpycha siatki i nie ciągnie za sobą ozdobników
+stojących na jego krawędzi.
+
+**Wyłapuje.** `tests/visual/motion.spec.ts` → „Hover sekcji treściowych"
+(cztery testy: kafel ma zareagować kolorem i poświatą, a zbliżenie ma się
+wydarzyć na obrazie przy NIEZMIENIONYM pudełku gospodarza).
+
+**Do startera.** Zasada dla każdego bloku z choreografią wejścia: `transform`
+należy do wejścia, hover pożycza sobie dzieci. Warto trzymać ją obok definicji
+`.reveal`, bo trafia się na nią przy pierwszym hoverze, jaki ktoś dopisze.
+
+---
+
+### P-058 — token czasu odczytany z CSS-a jest 1000× za mały (i bywa pusty)
+
+**Objaw.** Skrypt komponentu bierze czas animacji z tokenu, żeby nie powtarzać
+wartości w dwóch miejscach:
+
+```ts
+const duration = Number.parseFloat(getComputedStyle(el).getPropertyValue('--x-duration'))
+el.animate(keyframes, { duration })
+```
+
+W `astro dev` przejście gra. Na zbudowanej stronie **nie widać go w ogóle** —
+i to nie tak, że jest szybkie: jest krótsze od klatki, więc wygląda dokładnie
+jak brak animacji. Debugowanie prowadzi w ślepy zaułek, bo w konsoli
+`getComputedStyle(...).getPropertyValue('--x-duration')` na TEJ SAMEJ stronie
+zwraca poprawną wartość.
+
+**Przyczyna.** Dwie, składają się na jeden objaw.
+
+1. **Jednostka nie jest tą, którą napisano.** Lightning CSS skraca `380ms`
+   do `.38s` — krótszy zapis, ta sama wartość dla CSS-a. Dla `parseFloat`
+   to `0.38`, a `duration` w Web Animations liczy się w **milisekundach**.
+   `astro dev` nie minifikuje, więc lokalnie token zostaje w `ms`.
+2. **Odczyt na starcie potrafi zwrócić pusty string.** Skrypt komponentu
+   wykonuje się, zanim wartości custom properties są policzone; `|| 0` w takim
+   odczycie zamienia to w zero, czyli znowu „animacja bez czasu".
+
+**Fix.** Czytaj token **przy każdym użyciu**, nie raz przy starcie, i nie
+zakładaj jednostki:
+
+```ts
+const readMs = (value: string) => {
+  const amount = Number.parseFloat(value)
+  if (!Number.isFinite(amount)) return 0
+  return /ms$/.test(value.trim()) ? amount : amount * 1000
+}
+```
+
+Odczyt przy użyciu kosztuje jedno `getComputedStyle` na interakcję (nie na
+klatkę) i przy okazji pozwala podmienić token w dev-toolsach bez przeładowania.
+
+**Wyłapuje.** ✅ `tests/visual/motion.spec.ts` → „Kreator kontaktu / krok
+przenika…" pyta o `getAnimations()` **na buildzie**, więc łapie oba warianty:
+przy złej jednostce animacja kończy się przed odczytem i tablica jest pusta,
+przy pustym tokenie w ogóle nie startuje.
+
+**Do startera.** `readMs` obok pierwszego skryptu, który sięga po token czasu.
+Klasa błędu jest szersza niż czas: KAŻDA wartość czytana z CSS-a do JS-a jest
+przepuszczona przez minifikator (`.38s`, `#f00` → `red`, `0px` → `0`), więc
+parsowanie musi znosić zapis, którego nikt nie napisał.
+
+---
+
+### P-059 — warstwa `::before` przykrywa własną treść, a snapshot tego nie widzi
+
+**Objaw.** Kafel/przycisk dostaje pod spód warstwę do animowania (gradient,
+poświata) jako `::before` z `position: absolute`. Po zmianie aktywny kafel jest
+**pustym prostokątem** — ikona i podpis znikają. Żadnego błędu, w drzewie DOM
+wszystko jest, tekst da się zaznaczyć czytnikiem.
+
+**Przyczyna.** `::before` jest pierwszym dzieckiem w drzewie, więc odruch mówi
+„maluje się pod resztą". Nieprawda, gdy jest POZYCJONOWANY: element
+pozycjonowany z `z-index: auto` maluje się w kroku 8 kolejności malowania,
+a zwykła treść statyczna (tekst, `<svg>`, `<span>`) w krokach 4–7. Kolejność
+w drzewie decyduje dopiero MIĘDZY elementami pozycjonowanymi.
+
+**Fix.** Treść, która ma stać nad warstwą, też musi być pozycjonowana —
+i wtedy wygrywa, bo jest później w drzewie:
+
+```css
+.tab::before { position: absolute; inset: -1px; opacity: 0 }
+.tab__icon,
+.tab__label { position: relative }   /* nigdzie nie jedzie, ma tylko wygrać malowanie */
+```
+
+`z-index: -1` na warstwie **nie** jest tym fiksem: wypycha ją pod tło
+gospodarza, więc gradient przestaje być widoczny w ogóle.
+
+**Wyłapuje.** ✅ `tests/visual/contact.spec.ts` → „aktywny kafel w pasie kroków
+pokazuje ikonę i podpis" — osobny, ciasny snapshot samego pasa.
+
+**Dlaczego osobny snapshot, a nie ten, który już był.** Zrzut całej sekcji tego
+NIE złapał i to jest tu druga lekcja. Przy `maxDiffPixelRatio: 0.002` dwa
+zgaszone napisy na wysokiej sekcji to ułamek promila pikseli — poniżej progu.
+Snapshot sekcji pilnuje układu; drobny element ze stanami potrzebuje własnego
+kadru, inaczej tolerancja zjada dokładnie te regresje, których nie widać gołym
+okiem na miniaturze.
+
+**Do startera.** Reguła: **warstwa dekoracyjna = `::before` pozycjonowany
++ `position: relative` na treści, która ma zostać na wierzchu.** Do tego zasada
+kadrowania snapshotów: co ma stany (tab, pigułka, kafel przełącznika), dostaje
+własny mały zrzut obok zrzutu sekcji.
+
+### P-060 — komponent Astro bez własnego `<style>` nie dostaje klasy zasięgu
+
+**Objaw.** Rodzic przekazuje dziecku klasę i stylizuje ją u siebie:
+
+```astro
+<DotIcon class="why-item__icon" icon={item.icon} />
+<style>.why-item__icon { --dot-icon-width: 2rem }</style>
+```
+
+Klasa jest w wyjściowym HTML, reguła jest w wyjściowym CSS, a mimo to **nie
+działa** — element renderuje się w domyślnym rozmiarze. Zero błędów, zero
+ostrzeżeń w `astro check`.
+
+**Przyczyna.** Astro scopuje regułę rodzica do `.why-item__icon:where(.astro-cid-…)`,
+a atrybut `data-astro-cid-…` dokłada tylko tym komponentom, które MAJĄ własne
+style. Komponent bez `<style>` nie jest scopowany wcale, więc jego korzeń nie
+niesie klasy zasięgu i selektor rodzica go nie łapie. Dopóki dziecko ma choćby
+jedną własną regułę, wszystko działa — i to jest pułapka: znika w chwili,
+w której USUWASZ z dziecka style (u nas: przeniesione do `global.css`, żeby
+Astro nie dokleiło klasy zasięgu do 316 kółek).
+
+**Fix.** Nie stylizuj korzenia dziecka selektorem z rodzica. Podaj wartość
+**dziedziczeniem**, z elementu, który do rodzica należy:
+
+```css
+.why-item {          /* to jest w szablonie rodzica, więc ma klasę zasięgu */
+  --dot-icon-width: var(--why-icon-size);
+}
+```
+
+Custom property zjeżdża w dół drzewa niezależnie od zasięgu — a przy okazji
+kontrakt „rodzic podaje wymiar, dziecko wie, co z nim zrobić" jest uczciwszy
+niż sięganie regułą w cudzy korzeń.
+
+**Wyłapuje.** ✅ `tests/visual/why-choose-us.spec.ts` → „każda ikona ma 32 px
+szerokości" — mierzy `getBoundingClientRect()`, więc niedziałająca zmienna jest
+złym rozmiarem, a nie brakiem reguły. Sam `astro check` tego nie widzi:
+z jego perspektywy i klasa, i reguła istnieją.
+
+**Do startera.** Reguła: **przez granicę komponentu przechodzą custom
+properties, nie selektory.**
+
+### P-061 — animacja `infinite` gaśnie u użytkownika z `reduce`, jeśli klatka `to` nie jest spoczynkiem
+
+**Objaw.** Pętla wygląda dobrze, ale przy `prefers-reduced-motion: reduce`
+(i na KAŻDYM snapshocie, bo testy wizualne włączają `reduce`, żeby zamrozić
+ruch) element zostaje w przypadkowym stanie pośrednim — przygaszony,
+przeskalowany, przesunięty. Zaakceptowany snapshot utrwala to jako „stan
+docelowy" i regresja przestaje istnieć.
+
+**Przyczyna.** Globalne wyłączenie ruchu nie brzmi `animation: none` — to
+zostawiałoby elementy na klatce startowej, często niewidoczne. Brzmi
+`animation-duration: 0.01ms` + `animation-iteration-count: 1`, czyli sadza
+element dokładnie na klatce **końcowej**. Przy animacji jednorazowej to jest
+z definicji stan docelowy. Przy pętli klatka końcowa jest tam, gdzie akurat
+wypadła — a intuicja podpowiada pisać cykl jako `from: spoczynek → to: szczyt`.
+
+**Fix.** Wiążący jest wyłącznie **`100%`**: ma być stanem spoczynkowym, bo tam
+ląduje `reduce`. Klatka `0%` może być inna, jeśli chcesz twardy zapłon na
+zawinięciu pętli:
+
+```css
+@keyframes blink {                  /* pętla gładka: 0% == 100% */
+  0%, 100% { opacity: 1 }           /* spoczynek — i tu ląduje `reduce` */
+  5%       { opacity: 0.6 }
+  12%      { opacity: 1 }
+}
+
+@keyframes rain {                   /* pętla z cięciem: 0% ≠ 100% i tak ma być */
+  0%        { opacity: 0.8 }        /* zapłon — MA być skokiem */
+  8%        { opacity: 0.55 }
+  32%, 100% { opacity: 0.095 }      /* spoczynek — i tu ląduje `reduce` */
+}
+```
+
+**Wyłapuje.** ✅ `tests/visual/motion.spec.ts` → „przy `reduce` ikona stoi
+dokładnie w stanie spoczynkowym". Test musi mierzyć `getComputedStyle`
+z `emulateMedia({ reducedMotion: 'reduce' })`, a NIE porównywać zrzuty —
+zrzuty są robione w tym samym stanie, więc potwierdzą każdą klatkę, na której
+element stanie.
+
+**Do startera.** Reguła: **`100%` animacji zapętlonej = stan spoczynkowy
+elementu.** Sprawdzian przed commitem: usuń animację myślą — czy to, co widać
+w klatce `100%`, jest tym, co ma zostać, gdy ruchu nie ma?
+
+### P-062 — SVG z Figmy ma warstwy, a snapshot 32 px ich nie pilnuje
+
+**Objaw.** Ikona wstawiona inline (żeby dało się animować jej części) wygląda
+„jakoś inaczej" — rozmyta, w jednym kolorze, bez kształtu, który był w pliku.
+Testy wizualne przechodzą, `astro check` milczy, nic nie krzyczy.
+
+**Przyczyna, dwuczęściowa.**
+
+1. Eksport z Figmy rzadko jest jedną warstwą. Ikona kropkowa z tego projektu ma
+   trzy, na wspólnych współrzędnych: martwe tło (`#242624`, ostre), poświata
+   (`#FF0043`, pod `feGaussianBlur`) i kształt (`#FEFFF1`, ostry, na tych samych
+   pozycjach co poświata). Parser, który zbiera WSZYSTKIE `<rect>` do jednej
+   listy i nakłada rozmycie na `<svg>`, dostaje czerwoną papkę — i nie ma jak
+   się o tym dowiedzieć, bo rect po rect wszystko się zgadza.
+2. Snapshot sekcji tego nie łapie. Przy `maxDiffPixelRatio: 0.002` cztery
+   rysunki 32 px na wysokiej sekcji to ułamek promila pikseli — poniżej progu.
+   Zmiana przechodzi jako „bez różnic wizualnych".
+
+**Fix.** Zanim spłaszczysz plik: policz `fill` w ciele SVG i zmapuj `<rect>` na
+głębokość zagnieżdżenia w grupach filtrów. Jedno polecenie mówi wszystko:
+
+```sh
+python3 -c "
+import re,collections,sys
+s=open(sys.argv[1]).read(); body=s[:s.index('<defs>')]
+print(collections.Counter(re.findall(r'fill=\"([^\"]+)\"', body)))" ikona.svg
+```
+
+Więcej niż jeden kolor = więcej niż jedna warstwa = parser musi je rozróżniać,
+a nie sumować. Parser powinien **rzucać** na nieznanym kolorze, a nie
+przepuszczać go do domyślnej warstwy — inaczej wymiana ikony w CMS-ie
+zdegraduje rysunek po cichu.
+
+**Wyłapuje.** ✅ `tests/visual/why-choose-us.spec.ts` → „rysunek zachowuje trzy
+warstwy z eksportu, nie jedną siatkę": liczba kropek w każdej grupie, `fill`
+każdej z nich i to, że rozmyta jest WYŁĄCZNIE poświata. Test patrzy na
+`getComputedStyle` grup, nie na piksele — bo o piksele w tej skali nie ma co
+pytać.
+
+**Do startera.** Reguła: **inline SVG zaczyna się od przeczytania pliku
+w całości, nie pierwszego kilobajta.** I druga, ogólniejsza: element mniejszy
+niż ~2 % kadru nie jest chroniony przez snapshot sekcji — potrzebuje asercji na
+strukturze albo własnego, ciasnego zrzutu (por. P-059).

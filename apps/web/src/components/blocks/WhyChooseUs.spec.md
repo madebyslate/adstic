@@ -54,17 +54,73 @@ kwadratu w `AdPlacements` czy numer kroku w `HowWeWork`): rysunek kropek niesie
 znaczenie konkretnego argumentu, więc w etapie 2 redaktor musi móc go wymienić
 razem z tekstem.
 
-## Wymiary ikony
+## Ikony
 
 Wszystkie ikony renderują się w **32 px szerokości**; wysokość jest `auto`, bo
 rysunki mają różną liczbę kropek w pionie (dwa pliki mają viewBox 32 × 32, dwa
-— 29 × 29). Stąd `width: var(--why-icon-size)` + `height: auto`, a nie kwadrat
-wymuszony na sztywno.
+— 29 × 29). Stąd `--dot-icon-width` + `height: auto`, a nie kwadrat wymuszony
+na sztywno.
 
-Ikony idą przez `<img src>` (`resolveVector`), nie inline: cztery pliki to
-łącznie ~49 KB SVG, z czego sam `contact.svg` ma 25 filtrów rozmycia. Wklejone
-w HTML powiększyłyby dokument o tyle samo na KAŻDYM wejściu, a jako pliki idą
-`loading="lazy"` (blok leży głęboko pod foldem) i są cache'owane na stałe.
+### Rysunek ma trzy warstwy, nie jedną
+
+To jest sedno tego pliku i najłatwiejsza rzecz do zepsucia. Eksport z Figmy nie
+jest jedną siatką kropek w jednym kolorze — to trzy warstwy na wspólnych
+współrzędnych:
+
+| Warstwa | Ile kropek | Kolor w pliku | Ostra? |
+|---|---|---|---|
+| tło rysunku | 33–35 | `#242624` | tak |
+| poświata | 14–16 | `#FF0043` | **nie** — pod `feGaussianBlur` |
+| kształt | te same 14–16 pozycji | `#FEFFF1` | tak |
+
+Czerwień jest **poświatą pod kremową kropką**, a nie osobnym rysunkiem —
+sprawdzone dla wszystkich czterech plików: zbiory współrzędnych warstwy 2 i 3 są
+identyczne. Kolejność malowania z eksportu: poświata, tło, kształt — tło leży
+NA poświacie, więc czerwień prześwituje między jego kropkami, zamiast się po
+nich rozlewać.
+
+Spłaszczenie tego do jednej warstwy (albo rozmycie całości) psuje rysunek
+w sposób, którego **snapshot sekcji nie złapie**: ikona ma 32 px, więc różnica
+ginie pod tolerancją porównania. Stąd osobny test
+(`why-choose-us.spec.ts` → „rysunek zachowuje trzy warstwy z eksportu").
+
+### Dlaczego inline, a nie `<img src>`
+
+Bo do wnętrza pliku wstawionego przez `<img>` CSS nie ma dostępu — to dla
+przeglądarki jeden nieprzezroczysty obrazek, a kropki mają się rozpalać
+pojedynczo. `ui/DotIcon.astro` czyta plik przy buildzie (`lib/dot-icon.ts`),
+zamienia `<rect>` na `<circle>` i wypisuje trzy grupy; mechanika siedzi
+w `global.css` przy „Ikony kropkowe”, żeby Astro nie dokleiło klasy zasięgu do
+każdego z 338 kółek.
+
+Rachunek wychodzi na plus w obie strony:
+
+| | `<img src>` | inline |
+|---|---|---|
+| waga | 49 KB w plikach, 3,7 KB po gzipie | 27,9 KB w HTML, **2,1 KB po gzipie** |
+| requesty | 4 (`lazy`) | 0 |
+| dostęp CSS do kropki | żaden | każda kropka jest elementem |
+
+Oszczędność bierze się stąd, że eksport niósł 25 osobnych filtrów rozmycia
+w samym `contact.svg`; zastępuje je jedna deklaracja `filter: blur()` na grupie
+poświaty. Wartość jest UŁAMKIEM szerokości rysunku (`--dot-icon-blur-ratio`),
+bo dwa viewBoxy renderują się na jedną szerokość — stała w px rozmywałaby
+połowę zestawu o 10 % za mocno.
+
+Kolory idą przez tokeny: poświata `--color-brand`, kształt `--color-fg`, tło
+`--dot-icon-grid`.
+
+**Odstępstwa od eksportu.** (1) 25 kropek w `contact.svg` niosło dodatkowo
+własny `feDropShadow` `rgb(255 53 53 / 0.25)`, którego pozostałe kropki tego
+samego rysunku nie mają — artefakt eksportu, nie odtworzony. (2) Kropki tła są
+malowane KOLOREM TREŚCI (`--dot-icon-grid` → `--color-fg`) przy spoczynkowym
+kryciu `--dot-icon-grid-rest` (0,095), a nie szarością `#242624` z pliku.
+Szarość z eksportu jest tu WYNIKIEM, nie wartością: kremowa kropka przy tym
+kryciu składa się na tle strony z powrotem w `#242624`. Różnica istnieje po to,
+żeby głowa sopla mogła być biała — rozjaśnić da się tylko coś, co w spoczynku
+nie stoi na pełnym kryciu. Pułapka: para jest policzona pod `--color-bg`
+(`#0d0f0d`); na jaśniejszej płycie ikona usiądzie w spoczynku wyżej niż
+w eksporcie. Pilnuje tego test „kropka tła w spoczynku ma kolor z eksportu".
 
 ## Odstępy
 
@@ -98,11 +154,61 @@ hover na czerwony kłąb spod kursora (`.btn-wipe`), focus przez globalny
 | Co | Kiedy | Czas | Easing | `prefers-reduced-motion: reduce` |
 |---|---|---|---|---|
 | wejście sekcji: etykieta, nagłówek, opis, przycisk, argumenty | wjazd sekcji w kadr (grupa `data-reveal-group`) | `--duration-reveal` (0,9 s), krok `--reveal-step` | `--ease-out-expo` | wyłączone globalnie — ląduje na klatce końcowej |
+| kształt + poświata: losowe mruganie | zawsze, w pętli | `--dot-icon-blink-duration` (2,6 s) × mnożnik kropki | `--ease-in-out-token` | wyłączone globalnie — ląduje na spoczynku |
+| tło: deszcz z góry na dół | zawsze, w pętli | `--dot-icon-rain-duration` (3,6 s) | `linear` | wyłączone globalnie — ląduje na spoczynku |
 | przycisk: czerwony kłąb spod kursora | hover / fokus | `--duration-slow` (kłąb), `--duration-base` (etykieta) | `--ease-out-expo` | wyłączone globalnie |
 
-Animacja kropek w ikonach jest ODŁOŻONA (klient: „może zanimujemy”) — dziś
-ikony są statyczne. Gdy wejdzie, musi stać na `transform`/`opacity`
-(AGENT-RULES §6) i respektować `prefers-reduced-motion`.
+### Dwa ruchy, nie jeden
+
+Otwarte pytanie z pierwszej wersji („czy kropki mają się animować") zostało
+zamknięte na TAK. W rysunku dzieją się dwie różne rzeczy i celowo nie są jednym
+mechanizmem:
+
+| Warstwa | Ruch | Czas |
+|---|---|---|
+| kształt + poświata | **losowe mruganie** — kilka kropek naraz, bez wzoru | `--dot-icon-blink-duration` (2,6 s) × własny mnożnik kropki |
+| tło | **deszcz z góry na dół** — sopel z gasnącą smugą, kolumna po kolumnie | `--dot-icon-rain-duration` (3,6 s) |
+
+**Mruganie kształtu.** Każda kropka ma własną fazę I własne tempo. Jedno bez
+drugiego nie wystarcza: przy wspólnym okresie układ domyka się po jednym
+obrocie i oko czyta z tego rytm. Błysk to przygaszenie kremowej kropki
+(`--dot-icon-face-dim`, 0,6 — im wyżej, tym mniejsza różnica koloru)
+i jednoczesne spęcznienie czerwonej poświaty pod nią, więc przez moment widać
+czerwień spod spodu.
+
+**Deszcz w tle.** W kolumnie zapala się kolejno coraz niższa kropka, a że
+gaśnięcie jednej nachodzi na zapłon kilku następnych, w kolumnie stoi cała
+smuga z gradientem — sopel — a nie jeden punkt wędrujący w dół. Skrócenie
+ogona (`@keyframes dot-icon-rain`) zamienia deszcz w rozsypane iskry: głowa
+nadal leci, ale nie widać, skąd i dokąd. Każda kolumna startuje w innym
+momencie cyklu, więc deszcz nie pada jednym frontem.
+
+Głowa sopla świeci `--dot-icon-grid-lit` (0,45), daleko od pełnego krycia:
+deszcz jest tłem rysunku, nie jego treścią. Przy 1 kropka tła jest tak samo
+jasna jak kropka kształtu — ikona na moment gubi to, co przedstawia, a same
+kropki robią się twarde i kłujące.
+
+**Losowość jest policzona, nie wylosowana.** Fazy i tempa wychodzą z hasza
+współrzędnych (`lib/dot-icon.ts`), bo `Math.random()` przy buildzie dałby inny
+układ w każdym przebiegu — czyli różnicę w snapshotach bez zmiany w kodzie.
+
+Ruch stoi na `opacity` i `transform` (AGENT-RULES §6). Rozmycie na grupie
+poświaty jest statyczne, ale sprawia, że każda klatka tej warstwy jest
+przemalowaniem, a nie złożeniem — świadomie: to cztery kwadraty 32 px,
+a alternatywą byłoby rozmycie zapieczone w pliku, czyli powrót do kropek jako
+pikseli.
+
+**Klatka `100%` MUSI być stanem spoczynkowym.** Globalna reguła
+`prefers-reduced-motion` skraca każdą animację do 0,01 ms i wymusza jedną
+iterację, więc użytkownik z `reduce` — i każdy zrzut w testach wizualnych —
+ląduje dokładnie na niej. Klatka `0%` bywa inna i to jest świadome: w deszczu
+zapłon MA być cięciem, nie przejściem (PLAYBOOK P-061).
+
+Czego pilnują testy w `motion.spec.ts`: że faza kropki kształtu NIE jest funkcją
+jej pozycji (inaczej wraca uporządkowana fala), że w kolumnie tła faza maleje
+w dół (inaczej deszcz leci do góry) i że przy `reduce` wszystkie trzy warstwy
+stoją na spoczynku. Żadnej z tych regresji nie złapie snapshot: zrzuty robią się
+właśnie przy `reduce`.
 
 ### Wejście
 
@@ -121,8 +227,8 @@ Blok podaje wyłącznie kolory, mechaniki nie powtarza.
 | Pozycja | Budżet | Faktycznie |
 |---|---|---|
 | JS (skompresowany) | 0 KB | 0 KB |
-| Requesty | +0 przy starcie | 4 ikony, wszystkie `lazy` pod foldem |
-| Największy zasób | — | `contact.svg`, 26 KB |
+| Requesty | +0 przy starcie | 0 — ikony są w dokumencie |
+| Ikony w dokumencie | — | 27,9 KB surowo, 2,1 KB po gzipie (było 3,7 KB w 4 plikach) |
 
 ## A11y
 
@@ -144,4 +250,4 @@ Blok podaje wyłącznie kolory, mechaniki nie powtarza.
    dla wszystkich; do potwierdzenia z Figmą.
 2. Padding pionowy wiersza: ze zrzutu wychodzi 36–39 px, przyjęte 36.
 3. Czy kropki mają się animować i w jakim rytmie (klient zapowiedział „później”).
-4. Docelowy adres przycisku — dziś ten sam `/contact/` co w `Cta`.
+3. Docelowy adres przycisku — dziś ten sam `/contact/` co w `Cta`.

@@ -82,9 +82,11 @@ sama sytuacja co przy strzałce w `HowWeWork` (PLAYBOOK P-015).
 
 | Stan | Co się dzieje |
 |---|---|
-| kafel `:hover` / `:focus-visible` | strzałka wchodzi z `opacity: 0 → 1` |
-| kafel < 768 px | strzałka jest widoczna od razu — nie ma hovera, z którego mogłaby wejść |
+| kafel `:hover` / `:focus-visible` | strzałka wchodzi z `opacity: 0 → 1` i dojeżdża po skosie o `--case-arrow-nudge` z tej strony, w którą pokazuje |
+| kafel `:hover` / `:focus-visible` | kadr zbliża się o `--case-tile-zoom` (1,04), tytuł unosi się o `--case-title-lift` (4 px) |
+| kafel < 768 px | strzałka jest widoczna od razu i NA MIEJSCU — nie ma hovera, z którego mogłaby wejść |
 | wiersz `:hover` | tło `--case-row-bg` → `--case-row-bg-hover` (rozjaśnienie o 5 na kanale, jak w FAQ) |
+| wiersz `:hover` / `:focus-visible` | logo zbliża się tak samo jak kadr kafla, strzałka rusza po tym samym skosie |
 | `:focus-visible` | globalny obrys z `global.css` — kafel i wiersz są zwykłymi `<a>` |
 
 Rozjaśnienie wiersza pod kursorem nie było w złożeniu — wiersz jest linkiem,
@@ -96,8 +98,19 @@ więc afordancja jest potrzebna; wzór wzięty z `--faq-panel-bg-hover`.
 |---|---|---|---|---|
 | `opacity` strzałki kafla | hover / focus | 150 ms | `--ease-standard` | przejście skrócone do 0,01 ms, strzałka DALEJ wchodzi |
 | `background-color` wiersza | hover | 150 ms | `--ease-standard` | j.w. |
+| dojazd strzałki (kafel i wiersz) | hover / focus | `--duration-fast` (150 ms) | `--ease-standard` | `translate: 0` — strzałka pojawia się bez drogi do przebycia |
+| zbliżenie kadru kafla i logo wiersza | hover / focus | `--duration-slow` / `--duration-base` | `--ease-standard` | `scale: 1` |
+| uniesienie tytułu kafla | hover / focus | `--duration-base` | `--ease-standard` | `translate: 0` |
 | wejście sekcji: etykieta, nagłówek, lead, przycisk, kafle, wiersze | wjazd sekcji w kadr (grupa `data-reveal-group`) | `--duration-reveal` (0,9 s), krok `--reveal-step` | `--ease-out-expo` | wyłączone globalnie — ląduje na klatce końcowej |
 | przycisk: czerwony kłąb spod kursora | hover / fokus | `--duration-slow` (kłąb), `--duration-base` (etykieta) | `--ease-out-expo` | wyłączone globalnie |
+
+Rusza się ZDJĘCIE, nie kafel: kafel przycina (`overflow: hidden`), więc jego
+krawędzie, logo i tytuł stoją w miejscu — a powiększenie kafla przesuwałoby
+sąsiadów w siatce i tak by nie zadziałało, bo `<li>` niesie animację wejścia
+wypełniającą `transform` (PLAYBOOK P-057).
+
+Afordancja jest szybsza niż kadr (`fast` vs `slow`): strzałka ma odpowiedzieć
+natychmiast, zbliżenie może dochodzić.
 
 Ukrycie samej zmiany stanu przy `reduce` zabrałoby afordancję — to nie jest
 ruch, tylko informacja, więc znika przejście, nie efekt.

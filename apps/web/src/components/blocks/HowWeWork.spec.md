@@ -107,13 +107,36 @@ jest świadoma: obwódka ma odcinać koło od kafli wyraźnie, a nie „technicz
 
 ## Stany
 
-Brak elementów interaktywnych — kroki nie są linkami.
+Kroki nie są linkami — hover jest ODPOWIEDZIĄ, nie afordancją kliknięcia.
+
+| Element | Stan | Co się dzieje |
+|---|---|---|
+| kafel kroku | hover | tło `--color-surface-step` → `--color-surface-step-hover`, poświata `--gradient-step-glow` wchodzi górą (pod numerem `/01`) |
+| opis kroku | hover kafla | `--color-fg-soft-muted` (40 %) → `--color-fg-soft` (100 %) |
+| strzałka (≥ 1024 px) | hover kafla po lewej | ikona przesuwa się o `--step-arrow-nudge` (18 % własnej szerokości) w stronę kroku następnego |
+
+Kafel NIE rusza się z miejsca, i to z dwóch powodów: niesie klasę wejścia,
+której wypełnienie zbiłoby każdy `transform` (PLAYBOOK P-057), a strzałka
+siedzi okrakiem na prześwicie i należy do kafla — przesunięty kafel zabrałby ją
+ze sobą i rozerwał pas. Rusza się ikona W ŚRODKU plakietki, nie plakietka:
+plakietka jest wycięta w prześwicie własną obwódką w kolorze tła, więc
+przesunięta odsłoniłaby krawędzie obu kafli.
+
+Rozjaśnienie opisu pod kursorem ŁAGODZI otwarty dług kontrastu (patrz „Otwarte
+pytania”: 40 % krycia to ≈ 3,1:1, poniżej AA). Nie zamyka go — dotyk hoveru
+nie ma.
 
 ## Animacje
 
 | Co | Kiedy | Czas | Easing | `prefers-reduced-motion: reduce` |
 |---|---|---|---|---|
 | wejście sekcji: etykieta, nagłówek, lead, kroki | wjazd sekcji w kadr (grupa `data-reveal-group`) | `--duration-reveal` (0,9 s), krok `--reveal-step` | `--ease-out-expo` | wyłączone globalnie — ląduje na klatce końcowej |
+| tło kafla, poświata, kolor opisu | hover | `--duration-base` (250 ms) | `--ease-standard` | przejście skrócone globalnie, zmiana ZOSTAJE |
+| skok strzałki | hover | `--duration-base` | `--ease-standard` | `translate: 0` — bez tego skrócenie zamienia ruch w przeskok |
+
+Poświata jedzie `opacity` na pseudoelemencie, nie podmianą `background-image`:
+gradientów nie da się przenikać, a przejście ma zostać na kompozytorze
+(AGENT-RULES §6).
 
 ### Wejście
 

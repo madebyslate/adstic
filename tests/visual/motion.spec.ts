@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 /**
  * Testy ruchu. Nie robią snapshotów — sprawdzają, czy animacje w ogóle
@@ -115,6 +115,163 @@ test.describe('Choreografia wejścia', () => {
   })
 })
 
+test.describe('Ikony kropkowe: mruganie i deszcz', () => {
+  const ICON = 'section:has(#why-choose-heading) .why-item__icon'
+
+  test('kropki kształtu mrugają losowo, a nie falą po rysunku', async ({ page }) => {
+    /*
+     * Ikony idą inline właśnie po to, żeby każda kropka kształtu miała własną
+     * fazę I własne tempo. Jedno bez drugiego nie wystarcza: przy wspólnym
+     * okresie układ domyka się po jednym obrocie i oko czyta z tego rytm.
+     *
+     * Kluczowa asercja jest jednak inna: faza NIE MOŻE być funkcją pozycji.
+     * Gdyby ktoś wrócił do fazy liczonej z przekątnej (tak wyglądała pierwsza
+     * wersja tej animacji), przez rysunek pojechałby uporządkowany pas —
+     * animacja nadal by DZIAŁAŁA i żaden snapshot by tego nie złapał.
+     */
+    await page.goto('/')
+
+    const dots = await page.evaluate(
+      (sel) =>
+        [...document.querySelectorAll(`${sel} .dot-icon__face circle`)].map((dot) => ({
+          phase: Number(getComputedStyle(dot).getPropertyValue('--dot-phase')),
+          rate: Number(getComputedStyle(dot).getPropertyValue('--dot-rate')),
+          diagonal: Number(dot.getAttribute('cx')) + Number(dot.getAttribute('cy')),
+        })),
+      ICON,
+    )
+
+    expect(dots.length).toBeGreaterThan(10)
+    expect(new Set(dots.map((dot) => dot.phase)).size, 'kropki dzielą fazę').toBeGreaterThan(10)
+    expect(new Set(dots.map((dot) => dot.rate)).size, 'kropki dzielą tempo').toBeGreaterThan(10)
+
+    // Współczynnik korelacji Pearsona między fazą a pozycją na przekątnej.
+    const mean = (values: number[]) => values.reduce((sum, v) => sum + v, 0) / values.length
+    const phases = dots.map((dot) => dot.phase)
+    const places = dots.map((dot) => dot.diagonal)
+    const [mp, ml] = [mean(phases), mean(places)]
+    const cov = mean(dots.map((_, i) => (phases[i]! - mp) * (places[i]! - ml)))
+    const sd = (values: number[], m: number) =>
+      Math.sqrt(mean(values.map((value) => (value - m) ** 2)))
+    const correlation = Math.abs(cov / (sd(phases, mp) * sd(places, ml)))
+
+    expect(correlation, 'faza kropki wynika z jej pozycji — to fala, nie losowe mruganie').toBeLessThan(0.4)
+  })
+
+  test('deszcz w tle leci z góry na dół, kolumna po kolumnie', async ({ page }) => {
+    /*
+     * Sedno efektu: w kolumnie kropek tła zapala się kolejno coraz niższa.
+     * Sprawdzalne jest to na fazie, a nie na zrzucie: faza wchodzi jako UJEMNE
+     * opóźnienie, więc kropka z fazą WIĘKSZĄ dobija do zapłonu wcześniej —
+     * w kolumnie faza musi więc MALEĆ w dół. Odwrócenie znaku w parserze daje
+     * deszcz lecący do góry, co wygląda jak animacja i przechodzi każdy snapshot.
+     *
+     * Faza jest liczona MODULO CYKL, więc kolumna, której przelot przechodzi
+     * przez granicę cyklu, ma w środku skok w górę (…0,03 → 0,99…). To nie jest
+     * usterka, tylko zawinięcie — dlatego porównujemy różnice modulo 1, a nie
+     * same wartości. Różnica „w dół" jest mała, różnica „w górę" bliska 1.
+     */
+    await page.goto('/')
+
+    const columns = await page.evaluate((sel) => {
+      // Grupujemy w obrębie JEDNEJ ikony — dwa rysunki mają ten sam viewBox,
+      // więc wspólne `cx` posklejałoby ich kolumny w jedną.
+      const icon = document.querySelector(sel)!
+      const byColumn = new Map<string, { cy: number; phase: number }[]>()
+      for (const dot of icon.querySelectorAll('.dot-icon__grid circle')) {
+        const key = dot.getAttribute('cx')!
+        byColumn.set(key, [
+          ...(byColumn.get(key) ?? []),
+          {
+            cy: Number(dot.getAttribute('cy')),
+            phase: Number(getComputedStyle(dot).getPropertyValue('--dot-phase')),
+          },
+        ])
+      }
+      return [...byColumn.values()].map((column) => column.sort((a, b) => a.cy - b.cy))
+    }, ICON)
+
+    expect(columns.length).toBeGreaterThan(4)
+
+    for (const column of columns) {
+      for (let index = 1; index < column.length; index += 1) {
+        const step = column[index - 1]!.phase - column[index]!.phase
+        const forward = step - Math.floor(step) // różnica modulo cykl
+        expect(
+          forward,
+          `kolumna nie zapala się z góry na dół: ${column.map((dot) => dot.phase).join(', ')}`,
+        ).toBeLessThan(0.5)
+      }
+    }
+
+    // Kolumny startują w różnych momentach — inaczej deszcz pada jednym frontem.
+    const starts = columns.map((column) => column[0]!.phase)
+    expect(new Set(starts).size, 'wszystkie kolumny startują równo').toBeGreaterThan(3)
+  })
+
+  test('animacje przeżywają minifikację i chodzą w pętli na zegarze', async ({ page }) => {
+    await page.goto('/')
+
+    const face = `${ICON} .dot-icon__face circle`
+    const glow = `${ICON} .dot-icon__glow circle`
+    const grid = `${ICON} .dot-icon__grid circle`
+
+    const onFace = await page.evaluate(animationsOn(face), face)
+    const onGlow = await page.evaluate(animationsOn(glow), glow)
+    const onGrid = await page.evaluate(animationsOn(grid), grid)
+
+    expect(onFace, `brak elementu ${face}`).not.toBeNull()
+    expect(onFace!.map((animation) => animation.name)).toContain('dot-icon-face-blink')
+    expect(onGlow!.map((animation) => animation.name)).toContain('dot-icon-glow-blink')
+    expect(onGrid!.map((animation) => animation.name)).toContain('dot-icon-rain')
+    // Zegar, nie scroll — ikony żyją także wtedy, gdy strona stoi.
+    expect(onFace![0].timeline).toBe('DocumentTimeline')
+    expect(onGrid![0].timeline).toBe('DocumentTimeline')
+  })
+
+  test('przy `reduce` ikona stoi dokładnie w stanie spoczynkowym', async ({ page }) => {
+    /*
+     * Cykle są nieskończone, a globalna reguła `prefers-reduced-motion` skraca
+     * je do 0,01 ms i wymusza jedną iterację — czyli sadza kropki na klatce
+     * KOŃCOWEJ. Gdyby ktoś przestawił keyframe'y tak, że cykl kończy się
+     * w zapłonie, użytkownik z `reduce` dostałby kropki tła rozpalone na stałe,
+     * a kształt przygaszony. Testy wizualne przyjęłyby to bez mrugnięcia, bo
+     * robią zrzuty dokładnie w tym stanie (PLAYBOOK P-061).
+     */
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.goto('/')
+    await page.locator(ICON).first().scrollIntoViewIfNeeded()
+
+    const resting = await page.evaluate(
+      (sel) => ({
+        face: [...document.querySelectorAll(`${sel} .dot-icon__face circle`)].map((dot) =>
+          Number(getComputedStyle(dot).opacity),
+        ),
+        glow: [...document.querySelectorAll(`${sel} .dot-icon__glow circle`)].map(
+          (dot) => getComputedStyle(dot).transform,
+        ),
+        grid: [...document.querySelectorAll(`${sel} .dot-icon__grid circle`)].map((dot) =>
+          Number(getComputedStyle(dot).opacity),
+        ),
+      }),
+      ICON,
+    )
+
+    expect(Math.min(...resting.face), 'kształt został przygaszony przy `reduce`').toBeGreaterThan(
+      0.99,
+    )
+    for (const opacity of resting.grid) {
+      expect(opacity, 'kropka tła została rozpalona przy `reduce`').toBeCloseTo(0.095, 3)
+    }
+    // `none` albo macierz jednostkowa — byle nie rozdmuchana poświata.
+    for (const transform of resting.glow) {
+      expect(transform, 'poświata została rozdmuchana przy `reduce`').toMatch(
+        /^(none|matrix\(1, 0, 0, 1, 0, 0\))$/,
+      )
+    }
+  })
+})
+
 test.describe('Przycisk: kłąb spod kursora', () => {
   /*
    * Pięć rodzin przycisków w projekcie dzieli jeden mechanizm (`.btn-wipe`).
@@ -129,18 +286,39 @@ test.describe('Przycisk: kłąb spod kursora', () => {
    * mają etykietę jasną już w spoczynku i po wjeździe czerwieni zostaje ona
    * dokładnie tam, gdzie była; wymaganie zmiany byłoby tu wymaganiem regresu.
    */
+  /*
+   * `only` i `prepare` istnieją dla jednego przypadku: pigułka nagłówka ma dwa
+   * wcielenia. Powyżej 1024 px stoi w pasku, poniżej — w płycie menu, którą
+   * najpierw trzeba otworzyć. To ten sam mechanizm w dwóch miejscach, więc
+   * pytanie zadajemy w obu, zamiast odpuszczać je na telefonie.
+   */
   const buttons = [
     { name: 'hero', selector: '.hero__cta-face', flips: true },
-    { name: 'nagłówek', selector: '.header__cta', flips: false },
+    { name: 'nagłówek', selector: '.header__cta', flips: false, only: 'wide' as const },
+    {
+      name: 'menu mobilne',
+      selector: '.header__menu-cta',
+      flips: false,
+      only: 'narrow' as const,
+      prepare: async (page: Page) => {
+        await page.locator('header button[popovertarget]').click()
+        await expect(page.locator('#site-menu')).toBeVisible()
+      },
+    },
     { name: 'CTA sekcji', selector: '.cta__button-face', flips: true },
     { name: 'WhyChooseUs', selector: '.why__button-face', flips: true },
     { name: 'pigułka z awatarem', selector: '.avatar-link', flips: true },
     { name: 'formularz kontaktowy', selector: '.button--primary', flips: true },
   ]
 
-  for (const { name, selector, flips } of buttons) {
+  for (const { name, selector, flips, only, prepare } of buttons) {
     test(`${name}: czerwień dojeżdża, a etykieta jaśnieje`, async ({ page }) => {
+      const wide = (page.viewportSize()?.width ?? 0) >= 1024
+      test.skip(only === 'wide' && !wide, 'Ten przycisk stoi w pasku dopiero od 1024 px.')
+      test.skip(only === 'narrow' && wide, 'Ten przycisk mieszka w menu, które istnieje do 1024 px.')
+
       await page.goto('/')
+      await prepare?.(page)
 
       const button = page.locator(selector).first()
       await button.scrollIntoViewIfNeeded()
@@ -181,6 +359,43 @@ test.describe('Przycisk: kłąb spod kursora', () => {
       expect(after.color, 'etykieta nie jest czytelna na czerwieni').toBe(CONTRAST_ON_RED)
     })
   }
+
+  test('ramka przycisku wsiąka w kłąb, zamiast zostać obcym pierścieniem', async ({ page }) => {
+    /*
+     * Jedyny przycisk z widoczną ramką (`.button--ghost`, „Wstecz" w kroku 2)
+     * niesie `.btn-wipe` NA SOBIE, a kłąb siedzi w pudełku dopełnienia — więc
+     * ramka zostaje nad czerwienią. Ma się z nią zlać, a nie zniknąć do
+     * przezroczystości: przezroczysta ramka pokazałaby prześwit płyty sekcji.
+     */
+    await page.goto('/')
+
+    const section = page.locator('section:has(#contact-heading)')
+    await section.locator('label.option').first().click()
+    await section.locator('[data-next]').click()
+
+    const back = section.locator('[data-back]')
+    await expect(back).toBeVisible()
+
+    /*
+     * Czekamy, aż CAŁA sekcja stanie: wejście trwa 0,9 s (klik przewinął ją
+     * w kadr, więc właśnie ruszyło), a zamiana kroku 0,38 s razem z wysokością
+     * płyty. Zmierzony wcześniej `boundingBox()` wskazuje miejsce, w którym za
+     * chwilę nic nie będzie, a kursor postawiony obok przycisku nie odpala
+     * hoveru — i test pada bez związku z tym, o co pyta.
+     */
+    await section.evaluate((element) =>
+      Promise.all(
+        element.getAnimations({ subtree: true }).map((animation) => animation.finished.catch(() => {})),
+      ),
+    )
+
+    const box = (await back.boundingBox())!
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.waitForTimeout(900)
+
+    const border = await back.evaluate((element) => getComputedStyle(element).borderTopColor)
+    expect(border, 'ramka nie zlała się z czerwienią marki').toBe('rgb(255, 0, 67)')
+  })
 
   test('punkt wejścia kursora steruje środkiem kłębu', async ({ page }) => {
     /*
@@ -398,6 +613,60 @@ test.describe('Wejścia a kolejność malowania', () => {
   })
 })
 
+/**
+ * Zamiana kroku w kreatorze kontaktu, zbadana JEDNYM `evaluate`: klik i pytanie
+ * o stan muszą trafić w tę samą klatkę, bo całe przejście trwa 0,38 s i po
+ * `await` na osobne zapytanie już go nie ma.
+ */
+const swapContactStep = async (page: Page) => {
+  /*
+   * Najpierw czekamy, aż skrypt kreatora się wykona: przed nim „Dalej" jest
+   * `hidden` (bez JS nie ma czego przełączać), więc klik w niego nic nie robi
+   * i test pyta o przejście, którego nikt nie zaczął. Bez tego pada raz na
+   * kilkanaście przebiegów, tylko przy obciążonej maszynie.
+   */
+  await expect(page.locator('[data-contact-form] [data-next]')).toBeVisible()
+
+  return page.evaluate(() => {
+    const form = document.querySelector<HTMLFormElement>('[data-contact-form]')!
+    const stage = form.querySelector<HTMLElement>('[data-steps]')!
+    const goal = form.querySelector<HTMLInputElement>('[data-goal]')!
+
+    goal.checked = true
+    form.querySelector<HTMLButtonElement>('[data-next]')!.click()
+
+    return {
+      leaving: form.querySelectorAll('.step--leaving').length,
+      stageAnimations: stage.getAnimations().length,
+      incomingAnimations: form.querySelector('[data-step="1"]')!.getAnimations().length,
+      /* Przycięcie sceny żyje tylko na czas ruchu wysokości. */
+      clipped: getComputedStyle(stage).overflow !== 'visible',
+      incomingHidden: form.querySelector<HTMLElement>('[data-step="1"]')!.hidden,
+    }
+  })
+}
+
+test.describe('Kreator kontaktu', () => {
+  /*
+   * Spec bloku mówi wprost, że krok PRZENIKA, a nie przeskakuje (Contact.spec.md
+   * → „Animacje"). Trzy rzeczy muszą jechać naraz — odchodzący krok, wchodzący
+   * i wysokość sceny — bo zabranie którejkolwiek zamienia płynną zamianę
+   * w skok: bez animacji wysokości przyciski pod formularzem szarpią o kilka-
+   * dziesiąt pikseli w pierwszej klatce.
+   */
+  test('krok przenika, a wysokość płyty dojeżdża razem z nim', async ({ page }) => {
+    await page.goto('/')
+
+    const state = await swapContactStep(page)
+
+    expect(state.incomingHidden, 'krok 2 miał się odsłonić od razu').toBe(false)
+    expect(state.leaving, 'krok 1 zniknął zamiast odjechać').toBe(1)
+    expect(state.incomingAnimations, 'krok 2 wskoczył bez ruchu').toBeGreaterThan(0)
+    expect(state.stageAnimations, 'wysokość sceny nie jedzie — przyciski skoczą').toBeGreaterThan(0)
+    expect(state.clipped, 'bez przycięcia wyższy krok wylewa się na przyciski').toBe(true)
+  })
+})
+
 test.describe('Redukcja ruchu', () => {
   /*
    * `page.emulateMedia`, a NIE `test.use({ reducedMotion })`. W tej wersji
@@ -421,6 +690,45 @@ test.describe('Redukcja ruchu', () => {
     expect(stuck, 'element został na klatce startowej mimo `reduce`').toEqual([])
   })
 
+  test('menu mobilne nie każe czekać na kaskadę pozycji', async ({ page }) => {
+    /*
+     * Kaskada pozycji menu jedzie na `transition-delay`, a globalna reguła
+     * redukcji zeruje opóźnienia ANIMACJI, nie PRZEJŚĆ — bez lokalnego
+     * `--menu-stagger: 0ms` użytkownik z `reduce` czekałby ćwierć sekundy na
+     * menu, które „się nie animuje". Test pyta o ostatnią pozycję, bo to ona
+     * czeka najdłużej.
+     */
+    test.skip((page.viewportSize()?.width ?? 0) >= 1024, 'Menu istnieje do 1024 px.')
+
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.goto('/')
+
+    await page.locator('header button[popovertarget]').click()
+    const last = page.locator('#site-menu .header__menu-item').last()
+    await expect(last).toBeVisible()
+
+    const delay = await last.evaluate((element) => getComputedStyle(element).transitionDelay)
+    expect(new Set(delay.split(', '))).toEqual(new Set(['0s']))
+  })
+
+  test('kreator kontaktu podmienia krok natychmiast', async ({ page }) => {
+    /*
+     * Przejście kroków jedzie na Web Animations, a globalna reguła skracająca
+     * animacje dotyczy WYŁĄCZNIE tych z CSS — skrypt musi sam zapytać
+     * `matchMedia`. Bez tego użytkownik z `reduce` dostaje pełne 0,38 s ruchu,
+     * o które prosił, żeby go nie było.
+     */
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.goto('/')
+
+    const state = await swapContactStep(page)
+
+    expect(state.incomingHidden).toBe(false)
+    expect(state.leaving, 'krok odchodzący został na wierzchu').toBe(0)
+    expect(state.stageAnimations).toBe(0)
+    expect(state.incomingAnimations).toBe(0)
+  })
+
   test('Lenis nie jest w ogóle pobierany', async ({ page }) => {
     const requests: string[] = []
     page.on('request', (request) => requests.push(request.url()))
@@ -430,5 +738,177 @@ test.describe('Redukcja ruchu', () => {
     await page.waitForLoadState('networkidle')
 
     expect(requests.filter((url) => /lenis/i.test(url))).toEqual([])
+  })
+})
+
+test.describe('Hover sekcji treściowych', () => {
+  /*
+   * Trzy sekcje (`WhoWeAre`, `HowWeWork`, `CaseStudies`) odpowiadają na kursor.
+   * Test pilnuje mechaniki, nie wyglądu — wygląd trzymają snapshoty, a te
+   * hoveru nie widzą, bo mysz stoi poza kadrem.
+   *
+   * Sedno jest w PLAYBOOK P-057: wszystkie te kafle niosą klasę wejścia,
+   * a jej wypełnienie (`animation-fill-mode: both`) BIJE zwykłe deklaracje
+   * `transform`, `translate`, `scale` i `opacity`. Ruch musi więc dostać
+   * DZIECKO kafla, nie kafel. Gdyby ktoś to kiedyś „uprościł", przenosząc
+   * przekształcenie na gospodarza, efekt zniknie po cichu — i wtedy czerwony
+   * jest ten plik, a nie oko klienta.
+   */
+  const settle = async (page: Page) => {
+    await page.evaluate(async () => {
+      for (let y = 0; y < document.body.scrollHeight; y += 300) {
+        window.scrollTo(0, y)
+        await new Promise((resolve) => setTimeout(resolve, 40))
+      }
+    })
+    await page.waitForTimeout(1500)
+  }
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/')
+    const pointer = await page.evaluate(() => matchMedia('(hover: hover)').matches)
+    test.skip(!pointer, 'Profil dotykowy — stan `hover` tu nie istnieje.')
+    await settle(page)
+  })
+
+  test('WhoWeAre: kafel ze statystyką jaśnieje, zapala ikonę i wpuszcza poświatę', async ({
+    page,
+  }) => {
+    const card = page.locator('.card--stat').first()
+    await card.scrollIntoViewIfNeeded()
+
+    const read = () =>
+      card.evaluate((element) => ({
+        background: getComputedStyle(element).backgroundColor,
+        icon: getComputedStyle(element.querySelector('.card__icon')!).color,
+        glow: Number(getComputedStyle(element, '::before').opacity),
+        /* Kafel MA stać w miejscu — to jest wymóg, nie efekt uboczny (P-057). */
+        moved: getComputedStyle(element).translate,
+      }))
+
+    const before = await read()
+    expect(before.glow, 'poświata jest widoczna bez kursora').toBe(0)
+
+    await card.hover()
+    await expect.poll(async () => (await read()).glow, { timeout: 3000 }).toBeGreaterThan(0.9)
+
+    const after = await read()
+    expect(after.background, 'kafel nie zareagował tłem').not.toBe(before.background)
+    expect(after.icon, 'ikona nie zapaliła się czerwienią').toBe('rgb(255, 0, 85)')
+    expect(after.moved, 'kafel się przesunął — to i tak zbiłaby animacja wejścia').toBe(before.moved)
+  })
+
+  test('WhoWeAre: kadr osoby zbliża się, ramka kafla stoi', async ({ page }) => {
+    const card = page.locator('.card--person').first()
+    await card.scrollIntoViewIfNeeded()
+
+    const media = card.locator('.card__media')
+    const frame = (await media.boundingBox())!
+
+    await card.hover()
+    await expect
+      .poll(
+        () => card.locator('.card__media img').evaluate((img) => getComputedStyle(img).scale),
+        { timeout: 3000 },
+      )
+      .not.toBe('none')
+
+    // Rośnie zdjęcie, nie kadr — inaczej kafel rozepchnąłby siatkę sekcji.
+    expect((await media.boundingBox())!.width).toBeCloseTo(frame.width, 1)
+  })
+
+  test('HowWeWork: krok jaśnieje, opis staje się czytelny, strzałka rusza dalej', async ({
+    page,
+  }) => {
+    const step = page.locator('.step').first()
+    await step.scrollIntoViewIfNeeded()
+
+    const description = step.locator('.step__description')
+    const arrow = step.locator('.step__arrow svg')
+    const arrowShown = await arrow.isVisible()
+
+    const before = {
+      background: await step.evaluate((element) => getComputedStyle(element).backgroundColor),
+      color: await description.evaluate((element) => getComputedStyle(element).color),
+    }
+
+    await step.hover()
+    await expect
+      .poll(() => step.evaluate((element) => Number(getComputedStyle(element, '::before').opacity)), {
+        timeout: 3000,
+      })
+      .toBeGreaterThan(0.9)
+
+    const after = {
+      background: await step.evaluate((element) => getComputedStyle(element).backgroundColor),
+      color: await description.evaluate((element) => getComputedStyle(element).color),
+    }
+
+    expect(after.background, 'krok nie zareagował tłem').not.toBe(before.background)
+    // 40 % krycia to ≈ 3,1:1, czyli poniżej AA — pod kursorem tekst ma być pełny.
+    expect(after.color, 'opis nie rozjaśnił się do pełnego krycia').toBe('rgb(248, 247, 244)')
+
+    if (arrowShown) {
+      expect(
+        await arrow.evaluate((element) => getComputedStyle(element).translate),
+        'strzałka nie ruszyła w stronę kroku następnego',
+      ).not.toBe('none')
+    }
+  })
+
+  test('CaseStudies: kadr kafla zbliża się, a strzałka dojeżdża na miejsce', async ({ page }) => {
+    const tile = page.locator('.tile').first()
+    await tile.scrollIntoViewIfNeeded()
+
+    const box = (await tile.boundingBox())!
+    const arrow = tile.locator('.tile__arrow')
+
+    expect(
+      Number(await arrow.evaluate((element) => getComputedStyle(element).opacity)),
+      'strzałka jest widoczna bez kursora',
+    ).toBe(0)
+
+    await tile.hover()
+    await expect
+      .poll(() => tile.locator('img').first().evaluate((img) => getComputedStyle(img).scale), {
+        timeout: 3000,
+      })
+      .not.toBe('none')
+
+    await expect
+      .poll(() => arrow.evaluate((element) => Number(getComputedStyle(element).opacity)), {
+        timeout: 3000,
+      })
+      .toBeGreaterThan(0.9)
+
+    // Strzałka wraca z odsunięcia do zera, a kafel nie zmienia rozmiaru.
+    await expect
+      .poll(() => arrow.evaluate((element) => getComputedStyle(element).translate), {
+        timeout: 3000,
+      })
+      .toMatch(/^(none|0px)$/)
+    expect((await tile.boundingBox())!.width).toBeCloseTo(box.width, 1)
+  })
+
+  test('redukcja ruchu zostawia kolory, zabiera drogę', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.goto('/')
+    await settle(page)
+
+    const tile = page.locator('.tile').first()
+    await tile.scrollIntoViewIfNeeded()
+    await tile.hover()
+    await page.waitForTimeout(300)
+
+    const state = await tile.evaluate((element) => ({
+      zoom: getComputedStyle(element.querySelector('img')!).scale,
+      arrow: getComputedStyle(element.querySelector('.tile__arrow')!).translate,
+      shown: getComputedStyle(element.querySelector('.tile__arrow')!).opacity,
+    }))
+
+    expect(state.zoom, 'zbliżenie zostało przeskokiem').toMatch(/^(none|1)$/)
+    expect(state.arrow, 'strzałka wciąż ma dystans do przebycia').toMatch(/^(none|0px)$/)
+    // Afordancja zostaje: to informacja, nie ruch.
+    expect(Number(state.shown)).toBeGreaterThan(0.9)
   })
 })

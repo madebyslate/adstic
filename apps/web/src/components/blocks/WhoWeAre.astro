@@ -299,6 +299,25 @@ const ICON_PATHS: Record<StatIcon, string[]> = {
     border-radius: var(--radius-block);
     background-color: var(--color-surface-card);
     box-shadow: var(--shadow-card);
+    /*
+      PUŁAPKA (PLAYBOOK P-057): kafel niesie klasę `.reveal`, a ta wypełnia
+      `transform` i `opacity` do końca życia strony (`animation-fill-mode:
+      both`). Wypełnienie animacji BIJE każdą zwykłą deklarację, więc podniesienie
+      kafla przez `translate` albo `scale` po prostu nic by nie zrobiło — i to
+      cicho, bez błędu. Stąd hover kafla gra wyłącznie tym, czego animacja
+      wejścia nie dotyka: tłem, obrysem i cieniem. Ruch dostają DZIECI kafla,
+      które własnej animacji nie mają.
+    */
+    transition:
+      background-color var(--duration-base) var(--ease-standard),
+      border-color var(--duration-base) var(--ease-standard),
+      box-shadow var(--duration-base) var(--ease-standard);
+  }
+
+  .card:hover {
+    border-color: var(--color-border-card-hover);
+    background-color: var(--color-surface-card-hover);
+    box-shadow: var(--shadow-card-hover);
   }
 
   .card--person {
@@ -319,6 +338,17 @@ const ICON_PATHS: Record<StatIcon, string[]> = {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    /*
+      Zbliżenie kadru, nie kafla: `.card__media` ma `overflow: hidden`, więc
+      ramka stoi w miejscu i rusza się samo zdjęcie. `scale` osobną własnością,
+      nie w `transform` — zdjęcie nie ma innych przekształceń, a osobna własność
+      nie kasuje niczego, co ktoś dopisze obok.
+    */
+    transition: scale var(--duration-slow) var(--ease-standard);
+  }
+
+  .card--person:hover .card__media :global(img) {
+    scale: var(--card-media-zoom);
   }
 
   .card__badge {
@@ -357,15 +387,56 @@ const ICON_PATHS: Record<StatIcon, string[]> = {
   }
 
   .card--stat {
+    position: relative;
     gap: var(--space-2);
     padding: var(--space-4);
     background-color: var(--color-surface-stat);
+  }
+
+  .card--stat:hover {
+    background-color: var(--color-surface-stat-hover);
+  }
+
+  /*
+    Poświata pod kursorem. Pseudoelement, nie druga warstwa tła: przejście
+    działa na `opacity`, czyli na kompozytorze (AGENT-RULES §6), a gradientu
+    w `background-image` nie da się przenikać.
+  */
+  .card--stat::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-image: var(--gradient-card-glow);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-base) var(--ease-standard);
+  }
+
+  .card--stat:hover::before {
+    opacity: 1;
+  }
+
+  /*
+    PUŁAPKA (ta sama co przy kaflach w CaseStudies): poświata jest
+    `position: absolute`, więc maluje się NAD treścią w normalnym przepływie.
+    Nadanie dzieciom `position: relative` wciąga je do tej samej warstwy, gdzie
+    o kolejności decyduje pozycja w drzewie — a tam są po pseudoelemencie.
+  */
+  .card--stat > * {
+    position: relative;
   }
 
   .card__icon {
     /* Ikona zostaje u góry, liczba spada na dół kafla. */
     margin-block-end: auto;
     color: var(--color-icon-muted);
+    transition: color var(--duration-base) var(--ease-standard);
+  }
+
+  /* Pod kursorem ikona zapala się czerwienią — jedyny akcent koloru w kaflu. */
+  .card--stat:hover .card__icon {
+    color: var(--color-brand-glow);
   }
 
   .card__value {
@@ -503,6 +574,15 @@ const ICON_PATHS: Record<StatIcon, string[]> = {
    * w stanie końcowym (jasnym), a nie początkowym.
    */
   @media (prefers-reduced-motion: reduce) {
+    /*
+      Reguła globalna skraca przejścia do 0,01 ms, ale zbliżenie kadru zostałoby
+      wtedy PRZESKOKIEM — a to nadal ruch. Zmiany koloru i cienia zostają:
+      niosą informację „kafel reaguje", nie ruch.
+    */
+    .card--person:hover .card__media :global(img) {
+      scale: 1;
+    }
+
     .who__word-bright {
       opacity: 1;
       animation: none;

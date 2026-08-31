@@ -96,8 +96,17 @@ oznacza więcej pustego miejsca pod tekstem, tylko nad nim.
 |---|---|---|
 | CTA | hover | czerwony kłąb spod kursora (`.btn-wipe`) — patrz „Animacje” |
 | CTA | focus-visible | globalny outline z `global.css` (`--color-focus`) |
+| kafel (oba rodzaje) | hover | tło `--color-surface-card(-stat)` → `-hover`, obrys → `--color-border-card-hover`, cień → `--shadow-card-hover` |
+| kafel ze zdjęciem | hover | kadr zbliża się o `--card-media-zoom` (1,04); ramka kafla stoi |
+| kafel ze statystyką | hover | poświata `--gradient-card-glow` wchodzi górą, ikona zapala się `--color-brand-glow` |
 
-Kafle nie są interaktywne — nie są linkami, bo klient nie podał celów.
+Kafle nie są interaktywne — nie są linkami, bo klient nie podał celów. Hover
+jest więc ODPOWIEDZIĄ, nie afordancją: nie zapowiada kliknięcia (nie zmienia
+kursora, nie pojawia się strzałka), tylko pokazuje, że strona żyje pod ręką.
+
+Kafel NIE unosi się `transform`em, choć tak wygląda: niesie klasę wejścia,
+której wypełnienie bije zwykłe deklaracje (PLAYBOOK P-057). Rolę podniesienia
+gra głębszy cień, a ruch dostają dzieci kafla.
 
 ## Animacje
 
@@ -107,6 +116,9 @@ Kafle nie są interaktywne — nie są linkami, bo klient nie podał celów.
 | światło na kresce | pętla | 4 s | `--ease-in-out-token` | zatrzymane w połowie kreski, `opacity: 0.6` |
 | wejście sekcji: etykieta, akapit, kreska, notka, przycisk, kafle | wjazd sekcji w kadr (grupa `data-reveal-group`) | `--duration-reveal` (0,9 s), krok `--reveal-step` | `--ease-out-expo` | wyłączone globalnie — ląduje na klatce końcowej |
 | przycisk: czerwony kłąb spod kursora | hover / fokus | `--duration-slow` (kłąb), `--duration-base` (etykieta) | `--ease-out-expo` | wyłączone globalnie |
+| tło, obrys i cień kafla | hover | `--duration-base` (250 ms) | `--ease-standard` | przejście skrócone globalnie, zmiana ZOSTAJE |
+| zbliżenie kadru osoby | hover | `--duration-slow` (450 ms) | `--ease-standard` | `scale: 1` — bez tego skrócenie zamienia ruch w przeskok |
+| poświata i ikona kafla statystyki | hover | `--duration-base` | `--ease-standard` | przejście skrócone globalnie, zmiana ZOSTAJE |
 
 Animowane są wyłącznie `opacity` i `translate` (AGENT-RULES §6). Jasne słowo
 jest osobną warstwą nad przygaszonym — animowanie `color` dawałoby ten sam

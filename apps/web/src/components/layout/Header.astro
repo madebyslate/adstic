@@ -12,7 +12,12 @@ import { mainNavigation, headerCta } from '@/lib/navigation'
  * Układ to siatka 1fr–auto–1fr, nie flex ze `space-between`: nawigacja ma być
  * wyśrodkowana względem STRONY, a nie względem wolnego miejsca między logiem
  * a przyciskiem — inaczej przesuwałaby się przy każdej zmianie długości etykiet.
+ *
+ * Poniżej 1024 px nawigacja i CTA przenoszą się do menu otwieranego przyciskiem.
+ * Menu stoi na atrybucie `popover` — bez skryptu i bez checkbox hacku. Pełne
+ * uzasadnienie i degradacja w `Header.spec.md` → „Stany".
  */
+const menuId = 'site-menu'
 ---
 
 <header class="header">
@@ -51,7 +56,63 @@ import { mainNavigation, headerCta } from '@/lib/navigation'
       <a class="header__cta btn-wipe" href={headerCta.href} aria-label={headerCta.ariaLabel}>
         {headerCta.label}
       </a>
+
+      {/*
+        `popovertarget` bez `popovertargetaction` PRZEŁĄCZA płytę, więc ten sam
+        przycisk otwiera i zamyka. Płyta zaczyna się pod paskiem, dlatego
+        przycisk zostaje widoczny i klikalny przy otwartym menu — nie trzeba
+        drugiego „✕" w środku.
+
+        Fokus do środka wprowadza `autofocus` na pierwszej pozycji płyty.
+        SPRAWDZONE, nie założone: obiecane przez specyfikację przejście tabem
+        z wywołującego prosto do popovera w WebKicie nie działa — `Tab` po
+        otwarciu ląduje w losowym elemencie STRONY POD płytą. Bez `autofocus`
+        menu byłoby dla klawiatury nie do przejścia.
+      */}
+      <button class="header__toggle" type="button" popovertarget={menuId} aria-label="Menu">
+        <span class="header__bars" aria-hidden="true">
+          <span class="header__bar"></span>
+          <span class="header__bar"></span>
+        </span>
+      </button>
     </div>
+  </div>
+
+  {/*
+    Druga nawigacja na stronie, więc z WŁASNĄ etykietą — inaczej czytnik ekranu
+    ogłasza dwa nierozróżnialne punkty orientacyjne.
+
+    Płyta NIE ma `hidden` ani `display: none` w stanie zamkniętym: chowa ją
+    wyłącznie mechanika popovera. Przeglądarka, która nie zna atrybutu, pokaże
+    tu po prostu rozwiniętą listę pod logo — degradacja, nie awaria.
+  */}
+  <div class="header__menu" id={menuId} popover>
+    <nav class="container-page" aria-label="Nawigacja mobilna">
+      <ul class="header__menu-list">
+        {
+          mainNavigation.map((item, index) => (
+            <li class="header__menu-item" style={`--menu-index: ${index}`}>
+              {/* `autofocus` w zamkniętej płycie jest bezczynny — element jest
+                  `display: none`, więc przy wczytaniu strony nie zabiera
+                  fokusu; działa dopiero, gdy popover się otwiera. */}
+              <a
+                class="header__menu-link"
+                href={item.href}
+                aria-label={item.ariaLabel}
+                autofocus={index === 0}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+        <li class="header__menu-item" style={`--menu-index: ${mainNavigation.length}`}>
+          <a class="header__menu-cta btn-wipe" href={headerCta.href} aria-label={headerCta.ariaLabel}>
+            {headerCta.label}
+          </a>
+        </li>
+      </ul>
+    </nav>
   </div>
 </header>
 
@@ -90,8 +151,8 @@ import { mainNavigation, headerCta } from '@/lib/navigation'
     width: auto;
   }
 
-  /* Nawigacja i CTA chowają się na wąskich ekranach — patrz Hero.spec.md,
-     menu mobilne powstaje razem z blokiem nawigacji, nie tutaj. */
+  /* Rozwinięta nawigacja jest wyłącznie desktopowa — poniżej 1024 px te same
+     pozycje stoją w płycie menu. */
   .header__nav {
     display: none;
   }
@@ -149,12 +210,192 @@ import { mainNavigation, headerCta } from '@/lib/navigation'
     justify-content: end;
   }
 
+  /*
+    CTA znika z paska poniżej 1024 px, a nie stoi obok przycisku menu: przy
+    390 px logo, pigułka i przycisk zjadają cały wiersz bez zapasu na dłuższą
+    etykietę. Pasek nie jest lepki, więc CTA i tak nie towarzyszy scrollowi —
+    to samo wezwanie stoi kilkaset pikseli niżej w hero. Patrz Header.spec.md.
+  */
   .header__cta {
-    /* `inline-block` jest wymogiem `.btn-wipe`, nie kosmetyką: na elemencie
-       liniowym `overflow: clip` jest ignorowany, więc kłąb hoveru wychodziłby
-       poza pigułkę zamiast zostać przycięty do jej obrysu. */
+    display: none;
+  }
+
+  .header__toggle {
+    display: grid;
+    place-items: center;
+    /* Cel dotykowy 44 px — wymiar z WCAG 2.5.8 z zapasem, nie krok rytmu. */
+    inline-size: var(--menu-toggle-size);
+    block-size: var(--menu-toggle-size);
+    /* Przycisk jest kwadratem celu dotykowego, a nie kwadratem ikony, więc
+       ujemny margines cofa go do krawędzi kontenera — inaczej logo i menu
+       miałyby różne odsunięcia od brzegu strony. */
+    margin-inline-end: calc((var(--menu-toggle-size) - var(--menu-bar-width)) / -2);
+    border: 0;
+    padding: 0;
+    background: none;
+    color: var(--color-fg);
+    cursor: pointer;
+  }
+
+  /*
+    Kreski leżą jedna NA drugiej w środku przycisku i rozjeżdżają się
+    `translate`. Gdyby stały w kolumnie z `gap`, przejście w krzyż wymagałoby
+    animowania odstępu, czyli układu — a animujemy wyłącznie `transform`
+    i `opacity` (AGENT-RULES §6).
+  */
+  .header__bars {
+    display: grid;
+    place-items: center;
+    inline-size: var(--menu-bar-width);
+    block-size: var(--menu-bar-width);
+  }
+
+  .header__bar {
+    grid-area: 1 / 1;
+    inline-size: var(--menu-bar-width);
+    block-size: var(--menu-bar-thickness);
+    border-radius: var(--radius-full);
+    background-color: currentcolor;
+    transition:
+      rotate var(--duration-base) var(--ease-standard),
+      translate var(--duration-base) var(--ease-standard);
+  }
+
+  .header__bar:first-child {
+    translate: 0 calc(-1 * var(--menu-bar-offset));
+  }
+
+  .header__bar:last-child {
+    translate: 0 var(--menu-bar-offset);
+  }
+
+  /*
+    Stan otwarcia czytamy z korzenia, a nie z przycisku: `aria-expanded`
+    wywołującego popover wylicza przeglądarka i NIE stoi w DOM-ie, więc CSS nie
+    ma go jak zobaczyć. `:has()` na `html` jest tu jedynym wejściem w ten stan.
+  */
+  :global(html:has(#site-menu:popover-open)) .header__bar {
+    translate: 0 0;
+  }
+
+  :global(html:has(#site-menu:popover-open)) .header__bar:first-child {
+    rotate: 45deg;
+  }
+
+  :global(html:has(#site-menu:popover-open)) .header__bar:last-child {
+    rotate: -45deg;
+  }
+
+  /* Blokada scrolla tła. Popover nie robi tego sam (to nie modal), a płyta
+     zakrywa ekran — scroll pod nią byłby ruchem, którego nie widać. */
+  :global(html:has(#site-menu:popover-open)) {
+    overflow: hidden;
+  }
+
+  /*
+    Płyta zaczyna się POD paskiem, nie od krawędzi ekranu: dzięki temu logo
+    zostaje widoczne, a przycisk klikalny, więc to samo miejsce otwiera
+    i zamyka menu. Stąd jawne `inset` — domyślne wyśrodkowanie popovera
+    (`margin: auto`) byłoby tu przeszkodą, nie pomocą.
+
+    `100dvh`, nie `100vh`: na telefonie pasek adresu zjada różnicę i ostatnia
+    pozycja chowałaby się pod nim.
+  */
+  .header__menu {
+    position: fixed;
+    inset-block: calc(var(--header-height) + var(--header-border-width)) 0;
+    inset-inline: 0;
+    inline-size: 100%;
+    max-inline-size: none;
+    block-size: auto;
+    max-block-size: none;
+    margin: 0;
+    border: 0;
+    padding-block: var(--menu-panel-padding);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background-color: var(--menu-panel-bg);
+    color: var(--color-fg);
+    opacity: 0;
+    translate: 0 calc(-1 * var(--menu-enter-shift));
+    /*
+      `display` i `overlay` są własnościami DYSKRETNYMI — bez
+      `transition-behavior: allow-discrete` w tej samej liście płyta znikałaby
+      natychmiast, zanim przejście zdąży się odegrać. `@starting-style` niżej
+      dokłada brakującą klatkę początkową przy otwieraniu.
+    */
+    transition:
+      opacity var(--duration-base) var(--ease-standard),
+      translate var(--duration-base) var(--ease-standard),
+      display var(--duration-base) allow-discrete,
+      overlay var(--duration-base) allow-discrete;
+  }
+
+  .header__menu:popover-open {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  @starting-style {
+    .header__menu:popover-open {
+      opacity: 0;
+      translate: 0 calc(-1 * var(--menu-enter-shift));
+    }
+  }
+
+  .header__menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--menu-link-gap);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /*
+    Kaskada pozycji jest na `transition-delay`, nie na `animation-delay`:
+    globalna reguła redukcji ruchu skraca czasy i zeruje opóźnienia ANIMACJI,
+    ale nie opóźnienia PRZEJŚĆ — stąd `--menu-stagger: 0ms` w bloku `reduce`
+    niżej. Bez tego użytkownik z redukcją czekałby ćwierć sekundy na menu,
+    które „się nie animuje".
+  */
+  .header__menu-item {
+    opacity: 0;
+    translate: 0 var(--menu-enter-shift);
+    transition:
+      opacity var(--duration-base) var(--ease-out-expo),
+      translate var(--duration-base) var(--ease-out-expo);
+  }
+
+  .header__menu:popover-open .header__menu-item {
+    opacity: 1;
+    translate: 0 0;
+    transition-delay: calc(var(--menu-index, 0) * var(--menu-stagger));
+  }
+
+  .header__menu-link {
+    display: block;
+    padding-block: var(--space-2);
+    color: var(--color-fg-muted);
+    font-size: var(--menu-link-size);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--leading-tight);
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-standard);
+  }
+
+  .header__menu-link:hover,
+  .header__menu-link:focus-visible {
+    color: var(--color-fg);
+  }
+
+  .header__menu-cta {
+    /* Ta sama pigułka co w pasku, tylko na całą szerokość płyty: `inline-block`
+       jest wymogiem `.btn-wipe` (na elemencie liniowym `overflow: clip` jest
+       ignorowany), a wyśrodkowanie robi `text-align`, nie flex. */
     display: inline-block;
-    /* „Zaokrąglone max" z makiety — przy tej wysokości pigułka. */
+    inline-size: 100%;
+    margin-block-start: var(--space-4);
     border-radius: var(--radius-full);
     background-color: var(--color-surface);
     color: var(--color-fg);
@@ -162,8 +403,14 @@ import { mainNavigation, headerCta } from '@/lib/navigation'
     font-size: var(--text-sm);
     font-weight: var(--font-weight-medium);
     line-height: var(--leading-tight);
+    text-align: center;
     text-decoration: none;
-    white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .header__menu {
+      --menu-stagger: 0ms;
+    }
   }
 
   @media (min-width: 1024px) {
@@ -173,6 +420,31 @@ import { mainNavigation, headerCta } from '@/lib/navigation'
 
     .header__nav {
       display: block;
+    }
+
+    .header__cta {
+      /* `inline-block` jest wymogiem `.btn-wipe`, nie kosmetyką: na elemencie
+         liniowym `overflow: clip` jest ignorowany, więc kłąb hoveru wychodziłby
+         poza pigułkę zamiast zostać przycięty do jej obrysu. */
+      display: inline-block;
+      /* „Zaokrąglone max" z makiety — przy tej wysokości pigułka. */
+      border-radius: var(--radius-full);
+      background-color: var(--color-surface);
+      color: var(--color-fg);
+      padding: var(--control-padding-y) var(--control-padding-x);
+      font-size: var(--text-sm);
+      font-weight: var(--font-weight-medium);
+      line-height: var(--leading-tight);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    /* Płyta menu przestaje istnieć, a nie tylko chowa się z oczu: gdyby została
+       otwarta przy przejściu z wąskiego ekranu, zakryłaby stronę bez przycisku,
+       którym można ją zamknąć. */
+    .header__toggle,
+    .header__menu {
+      display: none;
     }
   }
 </style>

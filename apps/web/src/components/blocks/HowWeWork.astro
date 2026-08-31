@@ -159,6 +159,50 @@ const steps = block.steps.map((step, index) => ({
     background-color: var(--color-surface-step);
     /* Domyślny promień to wewnętrzny; skrajne narożniki nadpisują go niżej. */
     border-radius: var(--step-radius-inner);
+    /*
+      Kafel pod kursorem zmienia wyłącznie tło — nie rusza się z miejsca, i to
+      z dwóch powodów. Po pierwsze niesie `.reveal`, której wypełnienie i tak
+      zbiłoby każdy `transform` z hoveru (PLAYBOOK P-057). Po drugie strzałka
+      siedzi OKRAKIEM na prześwicie i należy do kafla — przesunięty kafel
+      zabrałby ją ze sobą i rozerwał pas, który ma się czytać jako jedna płyta.
+    */
+    transition: background-color var(--duration-base) var(--ease-standard);
+  }
+
+  .step:hover {
+    background-color: var(--color-surface-step-hover);
+  }
+
+  /*
+    Poświata wchodzi GÓRĄ kafla, pod numerem `/01`. `opacity` na
+    pseudoelemencie, bo gradientu w `background-image` nie da się przenikać,
+    a przejście ma zostać na kompozytorze (AGENT-RULES §6).
+  */
+  .step::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-image: var(--gradient-step-glow);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-base) var(--ease-standard);
+  }
+
+  .step:hover::before {
+    opacity: 1;
+  }
+
+  /*
+    PUŁAPKA (P-040): poświata jest absolutna, więc bez tego malowałaby się NAD
+    numerem, tytułem i opisem — one leżą w normalnym przepływie, czyli w
+    warstwie NIŻSZEJ niż pozycjonowane potomstwo. `position: relative` wciąga
+    je do tej samej warstwy, gdzie decyduje kolejność w drzewie.
+  */
+  .step__number,
+  .step__title,
+  .step__description {
+    position: relative;
   }
 
   .step__number {
@@ -193,6 +237,17 @@ const steps = block.steps.map((step, index) => ({
     font-size: var(--text-sm);
     font-weight: var(--font-weight-medium);
     line-height: var(--leading-normal);
+    transition: color var(--duration-base) var(--ease-standard);
+  }
+
+  /*
+    Opis rozjaśnia się do pełnego krycia. To nie jest tylko ozdoba: przy 40 %
+    kontrast wynosi ≈ 3,1:1, czyli poniżej AA (otwarte pytanie w
+    HowWeWork.spec.md) — pod kursorem tekst staje się czytelny. Dług zostaje,
+    bo dotyk hoveru nie ma; hover go łagodzi, nie zamyka.
+  */
+  .step:hover .step__description {
+    color: var(--color-fg-soft);
   }
 
   /*
@@ -226,6 +281,17 @@ const steps = block.steps.map((step, index) => ({
   .step__arrow svg {
     width: 60%;
     height: 60%;
+    /*
+      Ruch dostaje IKONA, nie plakietka: plakietka jest wycięta w prześwicie
+      przez własną obwódkę w kolorze tła, więc przesunięta odsłoniłaby krawędzie
+      obu kafli. Wewnątrz koła jest na to miejsce.
+    */
+    transition: translate var(--duration-base) var(--ease-standard);
+  }
+
+  /* Krok pod kursorem popycha strzałkę w stronę kroku następnego. */
+  .step:hover .step__arrow svg {
+    translate: var(--step-arrow-nudge) 0;
   }
 
   /* Jedna kolumna: pas stoi pionowo, więc „zewnętrzne” są góra i dół. */
@@ -297,6 +363,17 @@ const steps = block.steps.map((step, index) => ({
       inset-block-start: 50%;
       inset-inline-end: 0;
       translate: 50% -50%;
+    }
+  }
+
+  /*
+    Reguła globalna skraca przejścia do 0,01 ms, ale skok strzałki zostałby
+    wtedy PRZESKOKIEM — a to nadal ruch. Zmiany koloru i tła zostają: niosą
+    informację „krok reaguje", nie ruch.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .step:hover .step__arrow svg {
+      translate: 0 0;
     }
   }
 </style>

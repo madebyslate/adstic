@@ -27,7 +27,7 @@ test.describe('Stopka', () => {
      */
     const names = async (scope: string) =>
       Promise.all(
-        (await page.locator(`${scope} nav a`).all()).map((link) =>
+        (await page.locator(`${scope} a`).all()).map((link) =>
           link.evaluate((node) => {
             const label = node.getAttribute('aria-label')
             if (label) return label
@@ -41,8 +41,13 @@ test.describe('Stopka', () => {
         ),
       )
 
-    const headerLinks = await names('header')
-    const footerLinks = await names('footer')
+    /*
+      Pasek, a nie cały `<header>`: te same pozycje stoją drugi raz w płycie
+      menu mobilnego, więc `header nav a` zwracałoby je podwójnie. Porównanie
+      paska z płytą to osobne pytanie i osobny test (`header.spec.ts`).
+    */
+    const headerLinks = await names('header nav[aria-label="Nawigacja główna"]')
+    const footerLinks = await names('footer nav')
 
     expect(footerLinks.slice(0, headerLinks.length)).toEqual(headerLinks)
     expect(footerLinks.slice(headerLinks.length)).toEqual(['Privacy Policy', 'Terms of Use'])

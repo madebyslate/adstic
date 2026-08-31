@@ -1,6 +1,6 @@
 ---
 import type { WhyChooseUsBlock } from '@repo/shared'
-import { resolveVector } from '@/lib/media'
+import DotIcon from '@/components/ui/DotIcon.astro'
 
 interface Props {
   block: WhyChooseUsBlock
@@ -57,27 +57,13 @@ const headingId = 'why-choose-heading'
           block.items.map((item, index) => (
             <li class="why-item reveal" style={`--reveal-index: ${index + 2}`}>
               {/*
-                Ikona idzie plikiem, nie inline: cztery rysunki to ~49 KB SVG
-                (sam `contact.svg` ma 25 filtrów rozmycia), a blok leży głęboko
-                pod foldem — jako `lazy` nie kosztuje ani requestu przy starcie,
-                ani kilobajta dokumentu na każdym wejściu.
-
-                Szerokość ustala CSS (32 px dla każdej), wysokość zostaje `auto`,
-                bo rysunki mają różną liczbę kropek w pionie. `width`/`height`
-                w atrybutach niosą naturalne wymiary pliku — z nich przeglądarka
-                zna proporcję i rezerwuje właściwą wysokość.
+                Ikona idzie INLINE, nie plikiem: kropki migoczą, a do wnętrza
+                pliku wstawionego przez `<img>` CSS nie ma dostępu. Rachunek za
+                tę zamianę wychodzi na plus (49 KB w czterech requestach →
+                ~13 KB w dokumencie, zero requestów) — szczegóły w `DotIcon`
+                i `lib/dot-icon.ts`.
               */}
-              <img
-                class="why-item__icon"
-                src={resolveVector(item.icon)}
-                alt=""
-                width={item.icon.width}
-                height={item.icon.height}
-                loading="lazy"
-                decoding="async"
-                aria-hidden="true"
-                draggable={false}
-              />
+              <DotIcon class="why-item__icon" icon={item.icon} />
 
               <h3 class="why-item__title">{item.title}</h3>
               <p class="why-item__description">{item.description}</p>
@@ -207,16 +193,18 @@ const headingId = 'why-choose-heading'
     column-gap: var(--space-5);
     align-items: center;
     padding-block: var(--why-padding-y);
+    /*
+      Szerokość ikony jedzie DZIEDZICZENIEM, nie regułą na `.why-item__icon`:
+      `DotIcon` nie ma własnych stylów (patrz komentarz w komponencie), więc
+      Astro nie dokleja mu klasy zasięgu i selektor stąd by go nie złapał.
+      Ta sama wartość przelicza w `global.css` rozmycie rysunku, więc stoi
+      w jednym miejscu — tu, obok szerokości kolumny, którą też ustala.
+    */
+    --dot-icon-width: var(--why-icon-size);
   }
 
   .why-item + .why-item {
     border-block-start: 1px solid var(--color-border-hairline);
-  }
-
-  .why-item__icon {
-    width: var(--why-icon-size);
-    /* Rysunki mają różną liczbę kropek w pionie — wysokość wynika z pliku. */
-    height: auto;
   }
 
   .why-item__title {
