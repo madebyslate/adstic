@@ -5,6 +5,46 @@ Dopisujesz każdą decyzję niestandardową (AGENT-RULES §9.7).
 
 ---
 
+## 2026-09-01 — panel OurImpact jest samodzielnie animowanym SVG
+
+**Decyzja.** Raster panelu w `OurImpact` został zastąpiony dostarczonym SVG,
+osadzonym jako leniwie uruchamiany dokument w iframe. Dokument składa kolejno
+panel, `logo`, `brand-name`, `left-menu`, `range-tabs`, `date-dropdown` oraz
+trzy rzędy `box*`. `chart-bg*` są widoczne od początku, a `chart-fill*`,
+`chart-stroke` i `progressbar-fill` rosną rzędami. Po wejściu wykresy poruszają
+się subtelnie w pętli; karty i nawigacja reagują na hover. Z eksportu usunięto
+`foreignObject` z `backdrop-filter`.
+
+**Powód.** Plik ma semantycznie nazwane warstwy, ale CSS strony nie może
+sterować wnętrzem SVG wstawionego jako `<img>` ani odbierać z niego hoverów,
+dlatego reguły animacji są zapisane w samym pliku, a SVG działa jako osobny
+dokument. Pierwsza wersja inline powiększyła HTML o 535 KB
+i podniosła zmierzony LCP do 3092 ms przy budżecie 2500 ms; osobny leniwy
+zasób zachowuje ostrość i ruch, ale nie blokuje parsowania pierwszego ekranu.
+`foreignObject` tworzył kosztowną warstwę kompozytową nad gradientem, bez
+czytelnej korzyści wizualnej. Box SVG zachowuje proporcję poprzedniego PNG
+1739 × 1302 zamiast proporcji `viewBox` 1159 × 868: różnica ok. 0,03% jest
+niewidoczna w rysunku, ale bez niej zaokrąglenie wysokości przesuwało dalsze
+sekcje o 1 px. Root SVG używa `100% × 100%`, bo pikselowe wymiary eksportu
+wewnątrz iframe ucinały prawą trzecią część panelu; proporcję trzyma token
+kontenera. Iframe przechwytuje kółko myszy, więc dokument wysyła wyłącznie
+delta scrolla przez `postMessage`, a komponent przyjmuje komunikat tylko ze
+swojego `contentWindow` i przewija stronę. Loader i relay mają 466 B gzip
+źródła; bez JS zostaje statyczny fallback SVG w `noscript`.
+
+**Korekta ruchu po inspekcji.** Linie wykresów nie są skalowane: ścieżki
+`chart-fill*` i `chart-stroke` rysują się przez `stroke-dashoffset`, dzięki
+czemu nie wjeżdżają na gotową kartę jako rozciągnięta geometria. Pętla wykresu
+nie zmienia już krycia. Hover kart zostawia tylko translację bez skali, bo
+skalowanie całej grupy potrafiło zgubić gradientowe logo Meta podczas
+kompozycji. Przezroczysty koniec maski odsłaniał białe płótno iframe, dlatego
+root SVG ma jawne tło `#0D0F0D`, identyczne z tłem sekcji.
+Po kolejnym sprawdzeniu rysowanie linii trwa 2 s i używa symetrycznego easing,
+żeby ścieżka nie wykonywała większości ruchu na początku. Karta Meta jako
+jedyna nie przesuwa całej grupy na hover, a dwa radialne gradienty jej znaku
+zostały zastąpione odpowiadającymi im stałymi błękitami — usuwa to błąd
+ponownej kompozycji, przez który znak znikał po ruchu kursora.
+
 ## 2026-08-19 — Monorepo `apps/*` + `packages/*`, jeden lockfile
 
 **Decyzja.** Układ z AGENT-RULES §1 (`apps/web`, `packages/shared`,

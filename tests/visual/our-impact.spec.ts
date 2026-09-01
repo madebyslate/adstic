@@ -9,7 +9,7 @@ test.describe('Blok OurImpact', () => {
 
     const section = page.locator(SECTION)
     await section.scrollIntoViewIfNeeded()
-    // Oba obrazy są `lazy` — bez tego snapshot łapie pustą sekcję.
+    // Oba zasoby są `lazy` — bez tego snapshot łapie pustą sekcję.
     await expect(section.locator('img')).toHaveCount(2)
     await page.waitForFunction((selector) => {
       const node = document.querySelector(selector)
@@ -46,16 +46,29 @@ test.describe('Blok OurImpact', () => {
     await expect(section).toHaveCSS('background-color', 'rgb(13, 15, 13)')
   })
 
-  test('łuna jest poza drzewem dostępności, zrzut panelu ma opis', async ({ page }) => {
+  test('łuna jest poza drzewem dostępności, panel ma opis', async ({ page }) => {
     await page.goto('/')
 
     const section = page.locator(SECTION)
     await expect(section.locator('.impact__glow')).toHaveAttribute('aria-hidden', 'true')
 
-    const screenshot = section.locator('.impact__screen img')
-    await expect(screenshot).toHaveAttribute('alt', /Dashboard Adstic/)
-    // Obrazy są pod foldem — priorytet zostaje przy elemencie LCP w hero.
-    await expect(screenshot).toHaveAttribute('loading', 'lazy')
+    const dashboard = section.locator('.impact__screen img')
+    await expect(dashboard).toHaveAttribute('alt', /Dashboard Adstic/)
+    await expect(dashboard).toHaveAttribute('loading', 'lazy')
+  })
+
+  test('SVG zawiera animację nazwanych warstw i redukcję ruchu', async ({ page }) => {
+    await page.goto('/')
+
+    const section = page.locator(SECTION)
+    await section.scrollIntoViewIfNeeded()
+    const src = await section.locator('.impact__screen img').getAttribute('src')
+    expect(src).toBeTruthy()
+
+    const svg = await page.evaluate(async (url) => (await fetch(url)).text(), src!)
+    expect(svg).toContain('[id^="chart-fill"]')
+    expect(svg).toContain('#progressbar-fill')
+    expect(svg).toContain('@media (prefers-reduced-motion: reduce)')
   })
 
   test('nagłówkiem sekcji jest zdanie, nie etykieta nad nim', async ({ page }) => {

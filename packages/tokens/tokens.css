@@ -392,6 +392,8 @@
   --impact-glow-shift-narrow: 21%;
   /* Szerokość, przy której nagłówek łamie się na dwa wiersze jak w makiecie. */
   --impact-heading-width: 34rem; /* 544 px */
+  /* Zewnętrzny dokument SVG nie przekazuje iframe swojej proporcji. */
+  --impact-dashboard-ratio: 1739 / 1302;
 
   /*
    * Kafle WhoWeAre pod kursorem. Zbliżenie kadru jest MNOŻNIKIEM, nie

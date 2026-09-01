@@ -243,8 +243,8 @@
         "width": 1440,
         "height": 820
       },
-      "screenshot": {
-        "src": "content/media/dashboard-adstic.png",
+      "dashboard": {
+        "src": "content/media/adstic-dashboard.svg",
         "alt": "Dashboard Adstic: procent realizacji celu, przychód, zamówienia i koszt reklam dla Google Ads i Meta Ads w jednym widoku",
         "width": 1739,
         "height": 1302

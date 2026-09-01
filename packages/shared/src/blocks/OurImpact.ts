@@ -18,7 +18,7 @@ export const OurImpactBlock = z.object({
    * przez redaktora tak samo jak tło hero. `alt` puste — dekoracja.
    */
   glow: MediaImage,
-  /** Zrzut panelu. Niesie treść, więc `alt` opisuje, co na nim widać. */
-  screenshot: MediaImage,
+  /** Wektorowy panel. Niesie treść, więc `alt` opisuje, co na nim widać. */
+  dashboard: MediaImage,
 })
 export type OurImpactBlock = z.infer<typeof OurImpactBlock>

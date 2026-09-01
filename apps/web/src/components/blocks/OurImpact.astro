@@ -1,6 +1,7 @@
 ---
 import type { OurImpactBlock } from '@repo/shared'
 import Picture from '@/components/ui/Picture.astro'
+import { resolveVector } from '@/lib/media'
 
 interface Props {
   block: OurImpactBlock
@@ -8,6 +9,7 @@ interface Props {
 
 const { block } = Astro.props
 const headingId = 'our-impact-heading'
+const dashboardSrc = resolveVector(block.dashboard)
 ---
 
 {/*
@@ -35,18 +37,70 @@ const headingId = 'our-impact-heading'
     <h2 id={headingId} class="impact__heading reveal" style="--reveal-index: 2">{block.heading}</h2>
 
     {/*
-      Zrzut panelu nie dostaje obrysu ani zaokrągleń z CSS — ramka i wtopienie
-      dolnych kafli są wypalone w pliku (PNG z kanałem alfa).
+      `<iframe>` daje warstwom SVG prawdziwy hover. `src` ustawiamy dopiero przy
+      wejściu sekcji w kadr, więc cała choreografia startuje przed użytkownikiem.
+      Obraz w `noscript` jest bezpiecznym fallbackiem bez JS.
     */}
-    <div class="impact__screen scroll-settle">
-      <Picture
-        image={block.screenshot}
-        widths={[768, 1192, 1739]}
-        sizes="(min-width: 1280px) 1192px, 100vw"
-      />
+    <div class="impact__screen scroll-settle" data-impact-dashboard>
+      <iframe
+        class="impact__dashboard"
+        data-src={dashboardSrc}
+        title={block.dashboard.alt}
+        tabindex="-1"
+        width={block.dashboard.width}
+        height={block.dashboard.height}
+        loading="lazy"
+      ></iframe>
+      <noscript>
+        <img
+          src={dashboardSrc}
+          alt={block.dashboard.alt}
+          width={block.dashboard.width}
+          height={block.dashboard.height}
+          loading="lazy"
+          decoding="async"
+          fetchpriority="auto"
+          draggable="false"
+        />
+      </noscript>
     </div>
   </div>
 </section>
+
+<script>
+  const dashboard = document.querySelector<HTMLElement>('[data-impact-dashboard]')
+  const frame = dashboard?.querySelector<HTMLIFrameElement>('[data-src]')
+
+  if (dashboard && frame) {
+    window.addEventListener('message', (event) => {
+      if (event.source !== frame.contentWindow || event.data?.type !== 'adstic-dashboard:wheel') return
+
+      const deltaX = Number(event.data.deltaX)
+      const deltaY = Number(event.data.deltaY)
+      if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return
+
+      window.scrollBy(deltaX, deltaY)
+    })
+
+    const load = () => {
+      if (!frame.src) frame.src = frame.dataset.src ?? ''
+    }
+
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (!entry?.isIntersecting) return
+          load()
+          observer.disconnect()
+        },
+        { rootMargin: '20% 0px', threshold: 0.08 },
+      )
+      observer.observe(dashboard)
+    } else {
+      load()
+    }
+  }
+</script>
 
 <style>
   .impact {
@@ -135,12 +189,19 @@ const headingId = 'our-impact-heading'
 
   .impact__screen {
     width: 100%;
+    aspect-ratio: var(--impact-dashboard-ratio);
   }
 
-  .impact__screen :global(img) {
+  .impact__dashboard,
+  .impact__screen img {
     display: block;
     width: 100%;
     height: auto;
+  }
+
+  .impact__dashboard {
+    border: 0;
+    height: 100%;
   }
 
   @media (min-width: 768px) {
