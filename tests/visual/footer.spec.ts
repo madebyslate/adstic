@@ -50,7 +50,7 @@ test.describe('Stopka', () => {
     const footerLinks = await names('footer nav')
 
     expect(footerLinks.slice(0, headerLinks.length)).toEqual(headerLinks)
-    expect(footerLinks.slice(headerLinks.length)).toEqual(['Privacy Policy', 'Terms of Use'])
+    expect(footerLinks.slice(headerLinks.length)).toEqual(['Polityka prywatności', 'Regulamin'])
   })
 
   test('każdy link społecznościowy ma dostępną nazwę', async ({ page }) => {

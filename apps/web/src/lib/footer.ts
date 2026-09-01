@@ -13,12 +13,12 @@ import type { Link } from '@repo/shared'
 
 /** Zdanie pod logo. Trzy wiersze w makiecie wynikają z szerokości kolumny. */
 export const footerTagline =
-  'We help companies effectively advertise online. We specialize in Google Ads and Meta Ads campaigns. We prioritize transparency and measurable results.'
+  'Pomagamy firmom skutecznie reklamować się w internecie. Specjalizujemy się w kampaniach Google Ads i Meta Ads. Stawiamy na transparentność i mierzalne wyniki.'
 
 /** Czwarta kolumna menu. Osobna lista, bo to nie jest nawigacja produktowa. */
 export const legalNavigation: Link[] = [
-  { label: 'Privacy Policy', href: '/privacy-policy/' },
-  { label: 'Terms of Use', href: '/terms-of-use/' },
+  { label: 'Polityka prywatności', href: '/privacy-policy/' },
+  { label: 'Regulamin', href: '/terms-of-use/' },
 ]
 
 /**

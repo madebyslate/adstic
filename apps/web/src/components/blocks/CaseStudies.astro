@@ -208,6 +208,8 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
       samo i nie rozjeżdża się, gdy promień kafla kiedyś się zmieni.
     */
     overflow: hidden;
+    /* Piętra warstw kafla zostają wewnątrz kafla — nie licytują się z sekcją. */
+    isolation: isolate;
     border-radius: var(--radius-media);
     aspect-ratio: var(--case-tile-ratio);
     color: var(--color-fg);
@@ -216,6 +218,8 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
 
   /* Sam kadr, nie logo — dlatego dziecko bezpośrednie, a nie dowolny `img`. */
   .tile > :global(img) {
+    position: relative;
+    z-index: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -241,14 +245,19 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
     Przeciemnienie pod tytułem. Pseudoelement, nie osobny węzeł: to czysta
     warstwa malarska, więc nie ma po co trzymać jej w HTML-u.
 
-    PUŁAPKA: musi to być `::before`, nie `::after`. Wszystkie warstwy kafla są
-    `position: absolute` i mają `z-index: auto`, więc o kolejności malowania
-    decyduje kolejność w drzewie — `::after` jest OSTATNIM dzieckiem i zamalowałby
-    tytuł oraz strzałkę, zamiast leżeć pod nimi.
+    PUŁAPKA (PLAYBOOK P-063): kolejność malowania NIE może opierać się tu na
+    kolejności w drzewie. Zdjęcie dostaje na hover `scale`, a każda wartość inna
+    niż `none` tworzy kontekst układania — kadr zaczyna być malowany jak element
+    pozycjonowany z `z-index: 0`, czyli NAD tym `::before` (pseudoelement jest
+    wcześniej w drzewie). Efekt bez `z-index`: przeciemnienie znika w klatce
+    wejścia w hover i wraca dopiero, gdy przejście `scale` dobiegnie końca
+    i kontekst zniknie. Dlatego warstwy dostają jawne piętra: kadr 0,
+    przeciemnienie 1, treść (logo, strzałka, tytuł) 2.
   */
   .tile::before {
     content: '';
     position: absolute;
+    z-index: 1;
     inset-inline: 0;
     inset-block-end: 0;
     /*
@@ -266,6 +275,7 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
 
   .tile__logo {
     position: absolute;
+    z-index: 2;
     inset-block-start: var(--space-5);
     inset-inline-start: var(--space-5);
     display: block;
@@ -303,6 +313,7 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
 
   .tile__arrow {
     position: absolute;
+    z-index: 2;
     inset-block-start: var(--space-5);
     inset-inline-end: var(--space-5);
     background-color: var(--case-arrow-bg-media);
@@ -338,6 +349,7 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
 
   .tile__title {
     position: absolute;
+    z-index: 2;
     inset-block-end: var(--space-5);
     inset-inline: var(--space-5);
     max-width: var(--case-title-width);

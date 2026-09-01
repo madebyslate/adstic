@@ -1,3 +1,4 @@
+import { test as withMotion } from '@playwright/test'
 import { test, expect } from './_motion-off'
 
 const SECTION = 'section:has(#case-studies-heading)'
@@ -46,6 +47,39 @@ test.describe('Blok CaseStudies', () => {
     await expect(arrow).toHaveCSS('opacity', '1')
   })
 
+  /*
+   * Ten test MUSI iść z włączonym ruchem: pod `prefers-reduced-motion` zbliżenie
+   * kadru jest wyłączone (`scale: 1`), więc kontekst układania nie powstaje
+   * i regresja z P-063 nie ma jak się pokazać.
+   */
+  withMotion(
+    'przeciemnienie zostaje nad kadrem, kiedy kadr się zbliża',
+    async ({ page, isMobile }) => {
+      withMotion.skip(isMobile, 'Bez kursora nie ma hovera, więc i zbliżenia kadru.')
+
+      await page.goto('/')
+      const tile = page.locator(`${SECTION} .tile`).first()
+      await tile.scrollIntoViewIfNeeded()
+      await tile.hover()
+
+      const layers = () =>
+        tile.evaluate((node) => {
+          const image = node.querySelector('img')!
+          return {
+            scale: getComputedStyle(image).scale,
+            image: getComputedStyle(image).zIndex,
+            scrim: getComputedStyle(node, '::before').zIndex,
+          }
+        })
+
+      // Zbliżenie rusza z przejściem — czekamy, aż `scale` faktycznie zadziała.
+      await expect.poll(async () => (await layers()).scale).not.toBe('none')
+
+      const { image, scrim } = await layers()
+      expect(Number(scrim)).toBeGreaterThan(Number(image))
+    },
+  )
+
   test('kreska nad sekcją jest szersza niż treść — siedzi na kolumnie, nie na sekcji', async ({
     page,
   }) => {
@@ -73,7 +107,7 @@ test.describe('Blok CaseStudies', () => {
 
     // Treścią linku jest wynik, nie „czytaj więcej" — nazwa dostępna musi to nieść.
     await expect(section.locator('.tile').first()).toHaveAccessibleName(
-      'HANDMADE SHOP Growth in 3 years 700%',
+      'SKLEP HANDMADE Wzrost w 3 lata o 700%',
     )
 
     for (const arrow of await section.locator('.tile__arrow, .row__arrow').all()) {

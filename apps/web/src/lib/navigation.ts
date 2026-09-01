@@ -15,12 +15,12 @@ import type { Link } from '@repo/shared'
  * `trailingSlash: 'always'` i zaczną działać, gdy powstaną kolejne bloki.
  */
 export const mainNavigation: Link[] = [
-  { label: 'Process', href: '/process/' },
-  { label: 'Opinions', href: '/opinions/' },
-  { label: 'Case Studies', href: '/case-studies/' },
+  { label: 'Proces', href: '/process/' },
+  { label: 'Opinie', href: '/opinions/' },
+  { label: 'Realizacje', href: '/case-studies/' },
   { label: 'Blog', href: '/blog/' },
-  { label: 'Services', href: '/services/' },
-  { label: 'Results', href: '/results/' },
+  { label: 'Usługi', href: '/services/' },
+  { label: 'Wyniki', href: '/results/' },
 ]
 
-export const headerCta: Link = { label: 'Contact Us', href: '/contact/' }
+export const headerCta: Link = { label: 'Kontakt', href: '/contact/' }

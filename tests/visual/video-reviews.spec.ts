@@ -193,7 +193,7 @@ test.describe('Blok VideoReviews', () => {
     expect(count).toBeGreaterThanOrEqual(3)
 
     for (let index = 0; index < count; index += 1) {
-      await expect(plays.nth(index)).toHaveAttribute('aria-label', /.+ — play video review/)
+      await expect(plays.nth(index)).toHaveAttribute('aria-label', /.+ — odtwórz opinię wideo/)
     }
 
     // Kreska z flarą jest wskaźnikiem wizualnym — pozycję niesie stan karuzeli.

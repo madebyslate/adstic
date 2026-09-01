@@ -53,7 +53,7 @@ test.describe('Blok OurImpact', () => {
     await expect(section.locator('.impact__glow')).toHaveAttribute('aria-hidden', 'true')
 
     const screenshot = section.locator('.impact__screen img')
-    await expect(screenshot).toHaveAttribute('alt', /Adstic dashboard/)
+    await expect(screenshot).toHaveAttribute('alt', /Dashboard Adstic/)
     // Obrazy są pod foldem — priorytet zostaje przy elemencie LCP w hero.
     await expect(screenshot).toHaveAttribute('loading', 'lazy')
   })
@@ -63,9 +63,9 @@ test.describe('Blok OurImpact', () => {
 
     const heading = page.locator('#our-impact-heading')
     await expect(heading).toHaveRole('heading')
-    await expect(heading).toHaveText('Get instant insights into your business metrics')
+    await expect(heading).toHaveText('Miej wskaźniki swojego biznesu pod ręką')
 
     // Etykieta zostaje akapitem — inaczej sekcja miałaby dwa nagłówki.
-    await expect(page.locator(`${SECTION} p.impact__eyebrow`)).toHaveText('Our impact')
+    await expect(page.locator(`${SECTION} p.impact__eyebrow`)).toHaveText('Nasz wpływ')
   })
 })

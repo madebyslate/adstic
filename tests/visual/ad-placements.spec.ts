@@ -128,7 +128,7 @@ test.describe("Blok AdPlacements", () => {
     const heading = page.locator("#ad-placements-heading");
     await expect(heading).toHaveRole("heading");
     await expect(page.locator(`${SECTION} p.placements__eyebrow`)).toHaveText(
-      "Google Ads placements",
+      "Formaty reklam Google Ads",
     );
   });
 });

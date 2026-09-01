@@ -218,7 +218,7 @@ test.describe("Blok WhyChooseUs", () => {
     await page.goto("/");
 
     const heading = page.locator(`${SECTION} h2#why-choose-heading`);
-    await expect(heading).toHaveText("The difference we deliver");
+    await expect(heading).toHaveText("Różnica, którą wnosimy");
 
     // Argumenty są listą, a ich tytuły stoją poziom niżej niż nagłówek sekcji.
     await expect(page.locator(`${SECTION} ul.why__list > li`)).toHaveCount(4);

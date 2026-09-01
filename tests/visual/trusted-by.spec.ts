@@ -65,6 +65,6 @@ test.describe('Blok TrustedBy', () => {
 
     const heading = page.locator('#trusted-by-heading')
     await expect(heading).toHaveRole('heading')
-    await expect(heading).toHaveText('Trusted by market leaders')
+    await expect(heading).toHaveText('Zaufali nam liderzy rynku')
   })
 })

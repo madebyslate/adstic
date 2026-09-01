@@ -55,7 +55,7 @@ test.describe("Blok Cta", () => {
 
     const heading = page.locator("#cta-heading");
     await expect(heading).toHaveRole("heading");
-    await expect(page.locator(`${SECTION} p.cta__eyebrow`)).toHaveText("Let's talk");
+    await expect(page.locator(`${SECTION} p.cta__eyebrow`)).toHaveText("Porozmawiajmy");
   });
 
   test("korzyści są listą, ptaszki zostają poza czytnikiem", async ({ page }) => {

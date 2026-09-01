@@ -107,7 +107,7 @@ test.describe("Blok HowWeWork", () => {
     const heading = page.locator("#how-we-work-heading");
     await expect(heading).toHaveRole("heading");
     await expect(page.locator(`${SECTION} p.steps__eyebrow`)).toHaveText(
-      "How we work",
+      "Jak pracujemy",
     );
   });
 });

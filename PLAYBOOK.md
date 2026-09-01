@@ -1535,3 +1535,126 @@ pytać.
 w całości, nie pierwszego kilobajta.** I druga, ogólniejsza: element mniejszy
 niż ~2 % kadru nie jest chroniony przez snapshot sekcji — potrzebuje asercji na
 strukturze albo własnego, ciasnego zrzutu (por. P-059).
+
+### P-063 — `scale` na hover wyprzedza w malowaniu `::before`, który leżał nad nim
+
+**Objaw.** Kafel ma przeciemnienie pod tytułem. Najazd kursorem — przeciemnienie
+znika NATYCHMIAST, bez przejścia, mimo że żadna reguła go nie dotyka. Zjazd
+kursorem — wraca, ale z wyraźnym opóźnieniem, dokładnie tak długim jak przejście
+zbliżenia kadru. Wygląda to jak zły `transition-delay`, a nie ma tam żadnego.
+
+**Przyczyna.** Warstwy kafla nie mają `z-index`, więc o kolejności malowania
+decyduje kolejność w drzewie — a `::before` jest przed `<img>` tylko dopóki
+obrazek jest zwykłą treścią w przepływie (elementy pozycjonowane malują się nad
+nią). W chwili hoveru obrazek dostaje `scale`, każda wartość inna niż `none`
+tworzy kontekst układania, a element z kontekstem maluje się jak pozycjonowany
+z `z-index: 0` — czyli, w kolejności drzewa, NAD wcześniejszym `::before`.
+Skok jest natychmiastowy, bo to przełączenie warstwy, nie przejście. Powrót
+czeka, bo `scale` wraca do `none` dopiero na końcu przejścia — kontekst żyje
+tak długo, jak trwa animacja.
+
+To ta sama mechanika co P-052 i P-057, od trzeciej strony: tam animacja wejścia
+zamykała `z-index` dzieci i zjadała hover, tu przejście hoveru zmienia kolejność
+malowania rodzeństwa.
+
+**Fix.** Kiedy jakakolwiek warstwa w kaflu dostaje `transform`/`scale`/`filter`,
+kolejność malowania przestaje być własnością drzewa i musi być zapisana wprost.
+W `CaseStudies.astro`: kadr `z-index: 0`, przeciemnienie `1`, treść (logo,
+strzałka, tytuł) `2`, a na kaflu `isolation: isolate`, żeby te piętra nie
+licytowały się z resztą sekcji.
+
+**Wyłapuje.** ✅ `tests/visual/case-studies.spec.ts` → „przeciemnienie zostaje
+nad kadrem, kiedy kadr się zbliża": hover, czekanie aż `scale` przestanie być
+`none`, porównanie `z-index` kadru i `::before`. Test idzie z WŁĄCZONYM ruchem —
+pod `prefers-reduced-motion` zbliżenia nie ma, więc regresja nie miałaby jak się
+pokazać. Snapshot sekcji też jej nie widzi: robi zrzut bez kursora.
+
+**Do startera.** Reguła: **element, który animuje `transform`, `scale`, `filter`
+albo `opacity` < 1, wychodzi z kolejności drzewa na czas animacji.** Jeśli coś
+ma nad nim leżeć, to „coś" potrzebuje własnego `z-index` — a nie miejsca dalej
+w HTML-u.
+
+### P-064 — `background-clip: text` przy `line-height: 1` ucina ogonki, ale dopiero w polskim
+
+**Objaw.** H1 hero z gradientem malowanym przez litery wygląda poprawnie przez
+cały etap projektowania. Po podmianie treści na polską ostatni wiersz („więcej
+zamówień") ma ucięty dolny fragment `ę` — jakby sekcja miała `overflow: hidden`,
+którego tam nie ma. DevTools pokazują pełną literę w drzewie i pełną szerokość
+pudełka; brakuje samego malowania.
+
+**Przyczyna.** `background-clip: text` przycina TŁO do kształtu liter, ale tło
+i tak nie wychodzi poza pudełko elementu. Przy `line-height: 1` pudełko kończy
+się dokładnie na dole ostatniego wiersza, a zejścia liter (`g`, `y`, ogonki
+`ę`, `ą`) sięgają NIŻEJ niż wiersz — więc dla tej części glifu nie ma tła do
+przycięcia, a `-webkit-text-fill-color: transparent` zabrał wypełnienie. Litera
+jest w drzewie, tylko nie ma czym jej namalować.
+
+Dlaczego nie widać tego wcześniej: angielski copywriting z makiety kończył
+ostatni wiersz na „more orders" — bez ani jednego zejścia. Błąd był w kodzie od
+początku, ale zobaczyć go dało się dopiero na treści z ogonkami. Ta sama pułapka
+czeka na każdy tekst z `g`, `j`, `p`, `q`, `y` w ostatnim wierszu.
+
+**Fix.** Dołożyć zapas na zejścia i natychmiast oddać go layoutowi, żeby rytm
+pionowy się nie ruszył:
+
+```css
+padding-block-end: 0.16em;
+margin-block-end: -0.16em;
+```
+
+Nie `line-height` — ta wartość jest decyzją typograficzną z makiety i podniesienie
+jej rozjeżdża odstęp między wierszami H1. Przy `--leading-snug` (1.1) zapas jest
+już wystarczający, więc dotyczy to wyłącznie miejsc z `--leading-tight` (1).
+
+**Wyłapuje.** ⚠️ Nic automatycznie. Snapshot sekcji łapie to dopiero PO zmianie
+treści — czyli w momencie, w którym i tak trzeba go zaakceptować ręcznie, więc
+regresja przechodzi razem z nową baseline'ą. Zejścia liter są za małym ułamkiem
+kadru, żeby próg różnicy je zauważył (por. P-059, P-062).
+
+**Do startera.** Reguła: **`background-clip: text` i `line-height: 1` nie mogą
+stać obok siebie bez `padding-block-end`.** Szerzej — każdy tekst z gradientem
+przez litery testuj na stringu z zejściem w ostatnim wierszu, nie na treści
+z makiety. Dla projektów polskojęzycznych to samo dotyczy diakrytyków GÓRNYCH
+(`ź`, `ż`, `ó`) przy pierwszym wierszu i `overflow: hidden` na masce wejścia.
+
+### P-065 — copy z makiety mieści się w dwóch wierszach tylko po angielsku
+
+**Objaw.** H1 hero jest w Figmie łamany na dwa wiersze i `max-width` nagłówka
+jest dobrany dokładnie pod ten podział. Po tłumaczeniu na polski ten sam
+nagłówek łamie się na trzy wiersze, sekcja rośnie, a `text-wrap: balance` tego
+nie ratuje — `balance` wyrównuje DŁUGOŚCI wierszy przy zastanej ich liczbie,
+nie zmniejsza liczby wierszy.
+
+**Przyczyna.** Polski jest dłuższy od angielskiego o rząd 20–30 % na krótkich
+frazach marketingowych („Less guessing" 480 px → „Mniej zgadywania" 702 px przy
+94 px). `max-width` przepisany z makiety co do piksela jest więc dobrany pod
+JEDEN język i przy pierwszej lokalizacji staje się limitem, a nie zabezpieczeniem.
+
+**Fix.** Poszerzyć kolumnę tekstu, nie zmniejszać kroju — rozmiar czcionki jest
+decyzją z makiety i schodzenie z niego widać, poszerzenia `max-width` nie widać.
+W Adsticu 42rem → 45rem; przy 1440 px H1 wraca do dwóch wierszy, orbita
+z logotypami nie koliduje, bo tarcze leżą powyżej i poniżej linii tekstu.
+
+Zanim poszerzysz, ZMIERZ, ile brakuje — 30 px czy 300. Pomiar w przeglądarce,
+nie na oko:
+
+```js
+const cs = getComputedStyle(el)
+const s = document.createElement('span')
+s.textContent = 'Mniej zgadywania'
+s.style.cssText = `position:absolute;visibility:hidden;white-space:nowrap;font:${cs.font};letter-spacing:${cs.letterSpacing}`
+document.body.appendChild(s)
+s.getBoundingClientRect().width  // 702
+```
+
+Liczbę wierszy czyta się z `Range.getClientRects().length` na treści elementu —
+`getBoundingClientRect()` daje jeden prostokąt niezależnie od łamania.
+
+**Wyłapuje.** ⚠️ Nic automatycznie. Rozważana asercja „H1 ma dokładnie dwa
+wiersze" przy każdej zmianie treści wymagałaby aktualizacji razem z copy, więc
+niesie tyle samo co snapshot. Zostaje pomiar przy zmianie treści.
+
+**Do startera.** Reguła: **`max-width` przepisany z makiety obowiązuje w języku
+makiety.** Przy pierwszym tłumaczeniu przejdź breakpointy i policz wiersze
+nagłówków — nie tylko hero. Jeśli starter ma być wielojęzyczny, najdłuższy
+wariant językowy jest tym, pod który dobiera się kolumnę.

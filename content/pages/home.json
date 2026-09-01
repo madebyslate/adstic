@@ -1,8 +1,8 @@
 {
   "slug": "home",
   "seo": {
-    "title": "Adstic — less guessing, more orders",
-    "description": "We run advertising campaigns for Shopify stores of Polish manufacturers — so that every zloty of your budget is returned to you with an appropriate margin.",
+    "title": "Adstic — mniej zgadywania, więcej zamówień",
+    "description": "Prowadzimy kampanie reklamowe dla sklepów Shopify polskich producentów — tak, żeby każda złotówka budżetu wróciła do Ciebie z odpowiednią marżą.",
     "canonicalPath": "/",
     "ogImage": {
       "src": "content/media/og-default.png",
@@ -14,8 +14,8 @@
   "blocks": [
     {
       "blockType": "hero",
-      "heading": "Less guessing more orders",
-      "subheading": "We run advertising campaigns for Shopify stores of Polish manufacturers - so that every zloty of your budget is returned to you with an appropriate margin.",
+      "heading": "Mniej zgadywania więcej zamówień",
+      "subheading": "Prowadzimy kampanie reklamowe dla sklepów Shopify polskich producentów – tak, żeby każda złotówka budżetu wróciła do Ciebie z odpowiednią marżą.",
       "background": {
         "src": "content/media/hero-background.jpg",
         "alt": "",
@@ -23,7 +23,7 @@
         "height": 810
       },
       "cta": {
-        "label": "Let's increase the number of orders",
+        "label": "Zwiększmy liczbę zamówień",
         "href": "/contact/"
       },
       "trust": {
@@ -37,19 +37,19 @@
         ],
         "rating": {
           "value": 5,
-          "note": "+6 years of experience",
-          "label": "Rated 5 out of 5 stars"
+          "note": "+6 lat doświadczenia",
+          "label": "Ocena 5 na 5 gwiazdek"
         }
       }
     },
     {
       "blockType": "trustedBy",
-      "eyebrow": "Trusted by market leaders",
+      "eyebrow": "Zaufali nam liderzy rynku",
       "testimonial": {
-        "quote": "Patryk helped me quickly and efficiently improve the analytics on my custom store, so now I'm aware of what's going on. I highly recommend him and will use him again!",
+        "quote": "Patryk szybko i sprawnie poprawił analitykę w moim autorskim sklepie, więc teraz wiem, co się w nim dzieje. Gorąco polecam i na pewno skorzystam ponownie!",
         "author": {
           "name": "Bartek Adamczyk",
-          "role": "Founder domupielesze.pl"
+          "role": "Założyciel domupielesze.pl"
         }
       },
       "logos": [
@@ -63,12 +63,12 @@
     },
     {
       "blockType": "whoWeAre",
-      "eyebrow": "Who we are",
-      "lead": "A two-person team.",
-      "body": "We're not a large agency. And that's precisely why it works. We understands that handing over marketing to someone means handing over a slice of control over your business.",
-      "note": "That's why we operate transparently: you have full access to your advertising accounts, you know where every penny goes, and you always talk to the same person.",
+      "eyebrow": "Kim jesteśmy",
+      "lead": "Dwuosobowy zespół.",
+      "body": "Nie jesteśmy dużą agencją. I właśnie dlatego to działa. Rozumiemy, że oddanie komuś marketingu oznacza oddanie kawałka kontroli nad własnym biznesem.",
+      "note": "Dlatego działamy transparentnie: masz pełny dostęp do swoich kont reklamowych, wiesz, na co idzie każda złotówka, i zawsze rozmawiasz z tą samą osobą.",
       "cta": {
-        "label": "Let's talk with Founders",
+        "label": "Porozmawiaj z założycielami",
         "href": "/contact/",
         "avatar": {
           "src": "content/media/team/patryk-wieczorek.jpg",
@@ -87,13 +87,13 @@
             "height": 393
           },
           "name": "Patryk Wieczorek",
-          "badge": "Owner"
+          "badge": "Właściciel"
         },
         {
           "kind": "stat",
           "icon": "award",
-          "value": "+6 years",
-          "description": "Experience in conducting marketing for companies"
+          "value": "+6 lat",
+          "description": "Doświadczenia w prowadzeniu marketingu dla firm"
         },
         {
           "kind": "person",
@@ -109,23 +109,23 @@
           "kind": "stat",
           "icon": "chart",
           "value": "50%",
-          "description": "Sales increase in the first 90 days of cooperation"
+          "description": "Wzrostu sprzedaży w pierwszych 90 dniach współpracy"
         },
         {
           "kind": "stat",
           "icon": "tag",
           "value": "90%",
-          "description": "He stays with us for a long-term cooperation"
+          "description": "Klientów zostaje z nami na długoterminową współpracę"
         }
       ]
     },
     {
       "blockType": "caseStudies",
-      "eyebrow": "Customer results",
-      "heading": "Results, not promises.",
-      "lead": "We measure the effectiveness of our advertising efforts with tangible results. See how we've helped companies across various sectors achieve increased sales, leads, and market position.",
+      "eyebrow": "Wyniki klientów",
+      "heading": "Wyniki, nie obietnice.",
+      "lead": "Skuteczność naszych działań reklamowych mierzymy konkretnymi wynikami. Zobacz, jak pomogliśmy firmom z różnych branż zwiększyć sprzedaż, liczbę leadów i pozycję na rynku.",
       "cta": {
-        "label": "Let's talk with Founders",
+        "label": "Porozmawiaj z założycielami",
         "href": "/contact/",
         "avatar": {
           "src": "content/media/team/patryk-wieczorek.jpg",
@@ -136,7 +136,7 @@
       },
       "featured": [
         {
-          "title": "HANDMADE SHOP Growth in 3 years 700%",
+          "title": "SKLEP HANDMADE Wzrost w 3 lata o 700%",
           "href": "/case-studies/handmade-shop/",
           "logo": {
             "src": "content/media/casestudies/logo-apimel.png",
@@ -152,7 +152,7 @@
           }
         },
         {
-          "title": "+1600 inquiries in the construction industry",
+          "title": "+1600 zapytań w branży budowlanej",
           "href": "/case-studies/construction/",
           "logo": {
             "src": "content/media/casestudies/logo-dr.png",
@@ -168,7 +168,7 @@
           }
         },
         {
-          "title": "Over 5,800 additional leads in the renewable energy industry",
+          "title": "Ponad 5 800 dodatkowych leadów w branży OZE",
           "href": "/case-studies/renewable-energy/",
           "logo": {
             "src": "content/media/casestudies/logo-jmsolar.png",
@@ -184,7 +184,7 @@
           }
         },
         {
-          "title": "+55% year-on-year in the skydiving industry",
+          "title": "+55% rok do roku w branży skoków spadochronowych",
           "href": "/case-studies/skydiving/",
           "logo": {
             "src": "content/media/casestudies/logo-tandemy.png",
@@ -202,7 +202,7 @@
       ],
       "more": [
         {
-          "title": "2,500 leads and 1.5 million in revenue for a B2B law firm",
+          "title": "2 500 leadów i 1,5 mln przychodu dla kancelarii B2B",
           "href": "/case-studies/b2b-law-firm/",
           "logo": {
             "src": "content/media/casestudies/logo-delta.jpg",
@@ -212,7 +212,7 @@
           }
         },
         {
-          "title": "Year-on-year growth of 290k for the Polish manufacturer",
+          "title": "Wzrost rok do roku o 290 tys. dla polskiego producenta",
           "href": "/case-studies/polish-manufacturer/",
           "logo": {
             "src": "content/media/casestudies/logo-bura.jpg",
@@ -222,7 +222,7 @@
           }
         },
         {
-          "title": "Global e-Commerce and $3 million in revenue in a year",
+          "title": "Globalny e-commerce i 3 mln dolarów przychodu w rok",
           "href": "/case-studies/global-ecommerce/",
           "logo": {
             "src": "content/media/casestudies/logo-dr-square.jpg",
@@ -235,8 +235,8 @@
     },
     {
       "blockType": "ourImpact",
-      "eyebrow": "Our impact",
-      "heading": "Get instant insights into your business metrics",
+      "eyebrow": "Nasz wpływ",
+      "heading": "Miej wskaźniki swojego biznesu pod ręką",
       "glow": {
         "src": "content/media/our-impact-bg.jpg",
         "alt": "",
@@ -245,21 +245,21 @@
       },
       "screenshot": {
         "src": "content/media/dashboard-adstic.png",
-        "alt": "Adstic dashboard: percentage of goal, revenue, orders and ad cost for Google Ads and Meta Ads in one view",
+        "alt": "Dashboard Adstic: procent realizacji celu, przychód, zamówienia i koszt reklam dla Google Ads i Meta Ads w jednym widoku",
         "width": 1739,
         "height": 1302
       }
     },
     {
       "blockType": "adPlacements",
-      "eyebrow": "Google Ads placements",
-      "heading": "This is what your ads look like",
+      "eyebrow": "Formaty reklam Google Ads",
+      "heading": "Tak wyglądają Twoje reklamy",
       "placements": [
         {
-          "title": "Shopping Campaigns",
+          "title": "Kampanie produktowe",
           "preview": {
             "src": "content/media/placements/shopping-campaigns.png",
-            "alt": "A product ad with a photo, title, price and rating standing out among Google Shopping results.",
+            "alt": "Reklama produktowa ze zdjęciem, tytułem, ceną i oceną, wyróżniająca się wśród wyników Google Shopping.",
             "width": 1024,
             "height": 552
           },
@@ -271,28 +271,28 @@
           }
         },
         {
-          "title": "Search Campaigns",
+          "title": "Kampanie w wyszukiwarce",
           "preview": {
             "src": "content/media/placements/search-campaigns.png",
-            "alt": "A sponsored result on a phone: headline, description and product photo above the organic results.",
+            "alt": "Wynik sponsorowany na telefonie: nagłówek, opis i zdjęcie produktu nad wynikami organicznymi.",
             "width": 856,
             "height": 872
           }
         },
         {
-          "title": "Display Campaigns",
+          "title": "Kampanie displayowe",
           "preview": {
             "src": "content/media/placements/display-campaigns.png",
-            "alt": "A banner with a room photo and a headline shown on a phone while browsing.",
+            "alt": "Baner ze zdjęciem wnętrza i nagłówkiem, wyświetlany na telefonie podczas przeglądania stron.",
             "width": 856,
             "height": 872
           }
         },
         {
-          "title": "Video Campaigns",
+          "title": "Kampanie wideo",
           "preview": {
             "src": "content/media/placements/video-campaigns.png",
-            "alt": "A video ad playing in a player with a progress bar and playback controls.",
+            "alt": "Reklama wideo odtwarzana w playerze z paskiem postępu i przyciskami sterowania.",
             "width": 806,
             "height": 632
           },
@@ -307,41 +307,41 @@
     },
     {
       "blockType": "howWeWork",
-      "eyebrow": "How we work",
-      "heading": "What does collaboration look like? Four steps.",
-      "lead": "Every campaign begins with understanding your business. See how we work step-by-step towards effective marketing.",
+      "eyebrow": "Jak pracujemy",
+      "heading": "Jak wygląda współpraca? Cztery kroki.",
+      "lead": "Każda kampania zaczyna się od zrozumienia Twojego biznesu. Zobacz, jak krok po kroku dochodzimy do skutecznego marketingu.",
       "steps": [
         {
-          "title": "We're talking about your company",
-          "description": "You tell us about your company, clients, and goals. We'll review what's worked so far and what's wasted your budget. No strings attached."
+          "title": "Rozmawiamy o Twojej firmie",
+          "description": "Opowiadasz nam o swojej firmie, klientach i celach. Sprawdzamy, co dotąd działało, a co przepalało budżet. Bez zobowiązań."
         },
         {
-          "title": "You get a plan you understand",
-          "description": "We prepare a strategy tailored to your industry and budget. We explain in simple language the what, why, and what to expect."
+          "title": "Dostajesz plan, który rozumiesz",
+          "description": "Przygotowujemy strategię dopasowaną do Twojej branży i budżetu. Prostym językiem tłumaczymy, co robimy, po co i czego się spodziewać."
         },
         {
-          "title": "We take over everything",
-          "description": "Analytics, campaigns, creations, settings, optimization - that's our job."
+          "title": "Przejmujemy całość",
+          "description": "Analityka, kampanie, kreacje, ustawienia, optymalizacja – to nasza robota."
         },
         {
-          "title": "You have results and constant contact",
-          "description": "We don't disappear once a campaign launches. We stay in touch regularly, ensuring appropriate optimizations and measurable results."
+          "title": "Masz wyniki i stały kontakt",
+          "description": "Nie znikamy po uruchomieniu kampanii. Jesteśmy w stałym kontakcie, dbamy o optymalizacje i mierzalne wyniki."
         }
       ]
     },
     {
       "blockType": "cta",
-      "eyebrow": "Let's talk",
-      "heading": "Focus on your business. Leave the marketing to us.",
+      "eyebrow": "Porozmawiajmy",
+      "heading": "Zajmij się swoim biznesem. Marketing zostaw nam.",
       "cta": {
-        "label": "Schedule a free consultation",
+        "label": "Umów bezpłatną konsultację",
         "href": "/contact/"
       },
-      "benefitsHeading": "What will change when marketing starts working?",
+      "benefitsHeading": "Co się zmieni, gdy marketing zacznie działać?",
       "benefits": [
-        "Regularly appearing customers",
-        "You focus on fulfilling orders",
-        "Advertising pays off"
+        "Klienci pojawiają się regularnie",
+        "Skupiasz się na realizacji zamówień",
+        "Reklama się zwraca"
       ],
       "background": {
         "src": "content/media/cta-bg.jpg",
@@ -352,11 +352,11 @@
     },
     {
       "blockType": "whyChooseUs",
-      "eyebrow": "Why choose us",
-      "heading": "The difference we deliver",
-      "description": "We know how to effectively acquire customers through online channels. We focus on real results and transparent collaboration.",
+      "eyebrow": "Dlaczego my",
+      "heading": "Różnica, którą wnosimy",
+      "description": "Wiemy, jak skutecznie pozyskiwać klientów w kanałach online. Stawiamy na realne wyniki i przejrzystą współpracę.",
       "cta": {
-        "label": "Schedule a free consultation",
+        "label": "Umów bezpłatną konsultację",
         "href": "/contact/"
       },
       "items": [
@@ -367,8 +367,8 @@
             "width": 32,
             "height": 32
           },
-          "title": "Constant contact",
-          "description": "We have a group on whatsapp, regular meetings and we reply the same day."
+          "title": "Stały kontakt",
+          "description": "Mamy grupę na WhatsAppie, regularne spotkania i odpowiadamy tego samego dnia."
         },
         {
           "icon": {
@@ -377,8 +377,8 @@
             "width": 32,
             "height": 32
           },
-          "title": "No binding and long contracts",
-          "description": "You stay with us because you get results and are satisfied with the cooperation."
+          "title": "Bez wiążących, długich umów",
+          "description": "Zostajesz z nami, bo masz wyniki i jesteś zadowolony ze współpracy."
         },
         {
           "icon": {
@@ -387,8 +387,8 @@
             "width": 29,
             "height": 29
           },
-          "title": "Real results",
-          "description": "We make sure that advertising activities bring real customers to your company"
+          "title": "Realne wyniki",
+          "description": "Dbamy o to, żeby działania reklamowe przyprowadzały do Twojej firmy realnych klientów"
         },
         {
           "icon": {
@@ -397,16 +397,16 @@
             "width": 29,
             "height": 29
           },
-          "title": "You won't be the \"50th\" customer",
-          "description": "We work with a limited number of companies, ensuring each one receives our full attention. You're not just another number in Excel; we know your business, your industry, and your goals."
+          "title": "Nie będziesz „50. z kolei” klientem",
+          "description": "Pracujemy z ograniczoną liczbą firm, żeby każda dostała naszą pełną uwagę. Nie jesteś kolejnym numerem w Excelu – znamy Twój biznes, Twoją branżę i Twoje cele."
         }
       ]
     },
     {
       "blockType": "customerReviews",
-      "eyebrow": "Customer reviews",
-      "heading": "What our customers say about us",
-      "description": "We help companies effectively advertise online. We focus on partnerships and measurable results. See what our clients think of us.",
+      "eyebrow": "Opinie klientów",
+      "heading": "Co mówią o nas klienci",
+      "description": "Pomagamy firmom skutecznie reklamować się w internecie. Stawiamy na partnerstwo i mierzalne wyniki. Zobacz, co sądzą o nas klienci.",
       "background": {
         "src": "content/media/customer-reviews-bg.jpg",
         "alt": "",
@@ -415,12 +415,12 @@
       },
       "reviews": [
         {
-          "quote": "Patryk helped me quickly and efficiently improve the analytics on my custom store, so now I'm aware of what's going on. I highly recommend him and will use him again!",
+          "quote": "Patryk szybko i sprawnie poprawił analitykę w moim autorskim sklepie, więc teraz wiem, co się w nim dzieje. Gorąco polecam i na pewno skorzystam ponownie!",
           "author": "Bartek Adamczyk",
           "rating": 5
         },
         {
-          "quote": "Patryk is an expert in his field – his campaigns are well-thought-out, effective, and well-optimized. I recommend Patryk 100%!",
+          "quote": "Patryk jest ekspertem w swojej dziedzinie – jego kampanie są przemyślane, skuteczne i dobrze zoptymalizowane. Polecam Patryka w 100%!",
           "author": "Dominika Dąbrowska",
           "rating": 5,
           "logo": {
@@ -431,7 +431,7 @@
           }
         },
         {
-          "quote": "Patryk is an expert in his field – his campaigns are well-thought-out, effective, and well-optimized. I recommend Patryk 100%!",
+          "quote": "Patryk jest ekspertem w swojej dziedzinie – jego kampanie są przemyślane, skuteczne i dobrze zoptymalizowane. Polecam Patryka w 100%!",
           "author": "Dominika Dąbrowska",
           "rating": 5,
           "logo": {
@@ -442,7 +442,7 @@
           }
         },
         {
-          "quote": "Patryk is an expert in his field – his campaigns are well-thought-out, effective, and well-optimized. I recommend Patryk 100%!",
+          "quote": "Patryk jest ekspertem w swojej dziedzinie – jego kampanie są przemyślane, skuteczne i dobrze zoptymalizowane. Polecam Patryka w 100%!",
           "author": "Dominika Dąbrowska",
           "rating": 5,
           "logo": {
@@ -453,7 +453,7 @@
           }
         },
         {
-          "quote": "Patryk is an expert in his field – his campaigns are well-thought-out, effective, and well-optimized. I recommend Patryk 100%!",
+          "quote": "Patryk jest ekspertem w swojej dziedzinie – jego kampanie są przemyślane, skuteczne i dobrze zoptymalizowane. Polecam Patryka w 100%!",
           "author": "Dominika Dąbrowska",
           "rating": 5,
           "logo": {
@@ -464,7 +464,7 @@
           }
         },
         {
-          "quote": "Patryk is an expert in his field – his campaigns are well-thought-out, effective, and well-optimized. I recommend Patryk 100%!",
+          "quote": "Patryk jest ekspertem w swojej dziedzinie – jego kampanie są przemyślane, skuteczne i dobrze zoptymalizowane. Polecam Patryka w 100%!",
           "author": "Dominika Dąbrowska",
           "rating": 5,
           "logo": {
@@ -478,11 +478,11 @@
     },
     {
       "blockType": "videoReviews",
-      "eyebrow": "Video reviews",
-      "heading": "What our customers say about us",
-      "previousLabel": "Previous reviews",
-      "nextLabel": "Next reviews",
-      "closeLabel": "Close video",
+      "eyebrow": "Opinie wideo",
+      "heading": "Co mówią o nas klienci",
+      "previousLabel": "Poprzednie opinie",
+      "nextLabel": "Następne opinie",
+      "closeLabel": "Zamknij wideo",
       "reviews": [
         {
           "video": {
@@ -591,32 +591,32 @@
     {
       "blockType": "faq",
       "eyebrow": "FAQ",
-      "heading": "Frequently asked questions",
-      "description": "We answer the most common questions before starting a partnership. If you have any additional questions, please contact us.",
+      "heading": "Najczęściej zadawane pytania",
+      "description": "Odpowiadamy na pytania, które najczęściej pojawiają się przed rozpoczęciem współpracy. Jeśli masz dodatkowe — napisz do nas.",
       "items": [
         {
-          "question": "How long does it take to see the first effects of an advertising campaign?",
-          "answer": "Typically, the first results are visible within 2–3 weeks of launching a campaign. However, optimization takes longer – the full picture of effectiveness is usually visible after 6–8 weeks."
+          "question": "Po jakim czasie widać pierwsze efekty kampanii reklamowej?",
+          "answer": "Zwykle pierwsze wyniki widać w ciągu 2–3 tygodni od startu kampanii. Optymalizacja trwa jednak dłużej – pełny obraz skuteczności widać najczęściej po 6–8 tygodniach."
         },
         {
-          "question": "Can I scale sales without increasing my advertising budget?",
-          "answer": "Yes – up to a point. First, we squeeze out what the current budget can give: better creatives, tighter targeting and a cleaner funnel. When those margins run out, growth needs more budget."
+          "question": "Czy da się skalować sprzedaż bez zwiększania budżetu reklamowego?",
+          "answer": "Tak – do pewnego momentu. Najpierw wyciskamy to, co da obecny budżet: lepsze kreacje, węższe targetowanie i uporządkowany lejek. Gdy ten zapas się kończy, dalszy wzrost wymaga większego budżetu."
         },
         {
-          "question": "What do you do if a campaign doesn't produce the expected results?",
-          "answer": "We look for the reason in the data instead of adding budget: creative, audience, offer or the store itself. Then we change one thing at a time, so we know what actually moved the numbers."
+          "question": "Co robicie, gdy kampania nie przynosi oczekiwanych wyników?",
+          "answer": "Zamiast dokładać budżet, szukamy przyczyny w danych: kreacja, odbiorcy, oferta albo sam sklep. Potem zmieniamy jedną rzecz naraz, żeby wiedzieć, co realnie ruszyło wyniki."
         },
         {
-          "question": "Can I run Google Ads and Meta Ads campaigns simultaneously?",
-          "answer": "Yes, and in most stores that is exactly what we recommend. The two channels play different roles – Google collects existing demand, Meta creates it – so we measure them together, not against each other."
+          "question": "Czy można prowadzić kampanie Google Ads i Meta Ads jednocześnie?",
+          "answer": "Tak i w większości sklepów właśnie to rekomendujemy. Oba kanały pełnią różne role – Google zbiera istniejący popyt, Meta go tworzy – dlatego mierzymy je razem, a nie jeden przeciw drugiemu."
         },
         {
-          "question": "How do you measure the success of a campaign?",
-          "answer": "By revenue and margin, not by clicks. You get one dashboard with the goal, revenue, orders and ad cost for both channels, so the result is a number you can check yourself at any time."
+          "question": "Jak mierzycie sukces kampanii?",
+          "answer": "Przychodem i marżą, nie kliknięciami. Dostajesz jeden dashboard z celem, przychodem, zamówieniami i kosztem reklam dla obu kanałów, więc wynik jest liczbą, którą w każdej chwili sprawdzisz sam."
         },
         {
-          "question": "Do you also deal with website optimization?",
-          "answer": "We handle everything that stands between the ad and the order: analytics, product pages and checkout. We point out what is worth changing and we implement it in your Shopify store together with you."
+          "question": "Czy zajmujecie się też optymalizacją strony?",
+          "answer": "Zajmujemy się wszystkim, co stoi między reklamą a zamówieniem: analityką, kartami produktów i koszykiem. Wskazujemy, co warto zmienić, i wdrażamy to w Twoim sklepie Shopify razem z Tobą."
         }
       ]
     },
