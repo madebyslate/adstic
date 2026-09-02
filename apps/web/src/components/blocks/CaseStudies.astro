@@ -2,6 +2,7 @@
 import type { CaseStudiesBlock } from '@repo/shared'
 import AvatarLink from '@/components/ui/AvatarLink.astro'
 import Picture from '@/components/ui/Picture.astro'
+import { resolveVector } from '@/lib/media'
 
 interface Props {
   block: CaseStudiesBlock
@@ -50,7 +51,45 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
               rel={item.external ? 'noopener noreferrer' : undefined}
               target={item.external ? '_blank' : undefined}
             >
-              <Picture image={item.thumbnail} widths={[590, 1180]} sizes={TILE_SIZES} />
+              <span class="tile__media">
+                <Picture image={item.thumbnail} widths={[590, 1180]} sizes={TILE_SIZES} />
+              </span>
+
+              {/*
+                Wynik jest osobnym, animowanym SVG nad kadrem. Zdjęcia można
+                dzięki temu podmienić na czyste wersje bez składania ich od
+                nowa; pusty `alt`, bo tę samą informację niesie tytuł linku.
+              */}
+              <img
+                class:list={[
+                  'tile__result',
+                  item.resultGraphic.width < 270 && 'tile__result--compact',
+                ]}
+                data-case-result
+                data-src={resolveVector(item.resultGraphic)}
+                alt=""
+                width={item.resultGraphic.width}
+                height={item.resultGraphic.height}
+                loading="lazy"
+                decoding="async"
+                fetchpriority="auto"
+                draggable="false"
+              />
+              <noscript>
+                <img
+                  class:list={[
+                    'tile__result',
+                    item.resultGraphic.width < 270 && 'tile__result--compact',
+                  ]}
+                  src={resolveVector(item.resultGraphic)}
+                  alt=""
+                  width={item.resultGraphic.width}
+                  height={item.resultGraphic.height}
+                  loading="lazy"
+                  decoding="async"
+                  draggable="false"
+                />
+              </noscript>
 
               <span class="tile__logo">
                 <Picture image={item.logo} widths={[item.logo.width]} sizes={`${item.logo.width}px`} />
@@ -110,6 +149,45 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
     }
   </div>
 </section>
+
+<script>
+  const resultGraphics = document.querySelectorAll<HTMLImageElement>('[data-case-result]')
+
+  const loadResult = (image: HTMLImageElement) => {
+    const source = image.dataset.src
+    if (!source || image.hasAttribute('src')) return
+
+    const rawDelay = getComputedStyle(image).getPropertyValue('--case-result-start-delay').trim()
+    const parsedDelay = Number.parseFloat(rawDelay)
+    const delay = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? 0
+      : rawDelay.endsWith('ms')
+        ? parsedDelay
+        : parsedDelay * 1000
+
+    window.setTimeout(() => {
+      image.src = source
+      delete image.dataset.src
+    }, Number.isFinite(delay) ? delay : 0)
+  }
+
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue
+          loadResult(entry.target as HTMLImageElement)
+          observer.unobserve(entry.target)
+        }
+      },
+      { threshold: 0.28, rootMargin: '0% 0% -8% 0%' },
+    )
+
+    resultGraphics.forEach((image) => observer.observe(image))
+  } else {
+    resultGraphics.forEach(loadResult)
+  }
+</script>
 
 <style>
   /*
@@ -216,8 +294,15 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
     text-decoration: none;
   }
 
-  /* Sam kadr, nie logo — dlatego dziecko bezpośrednie, a nie dowolny `img`. */
-  .tile > :global(img) {
+  .tile__media {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  /* Sam kadr, nie logo ani grafika wyniku. */
+  .tile__media :global(img) {
     position: relative;
     z-index: 0;
     width: 100%;
@@ -236,9 +321,26 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
     transition: scale var(--duration-slow) var(--ease-standard);
   }
 
-  .tile:hover > :global(img),
-  .tile:focus-visible > :global(img) {
+  .tile:hover .tile__media :global(img),
+  .tile:focus-visible .tile__media :global(img) {
     scale: var(--case-tile-zoom);
+  }
+
+  .tile__result {
+    --case-result-start-delay: var(--case-result-delay);
+    position: absolute;
+    z-index: 1;
+    inset-block-start: var(--case-result-offset-y);
+    inset-inline-start: 50%;
+    display: block;
+    width: var(--case-result-width);
+    height: auto;
+    translate: -50% 0;
+    pointer-events: none;
+  }
+
+  .tile__result--compact {
+    width: var(--case-result-width-compact);
   }
 
   /*
@@ -252,12 +354,12 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
     wcześniej w drzewie). Efekt bez `z-index`: przeciemnienie znika w klatce
     wejścia w hover i wraca dopiero, gdy przejście `scale` dobiegnie końca
     i kontekst zniknie. Dlatego warstwy dostają jawne piętra: kadr 0,
-    przeciemnienie 1, treść (logo, strzałka, tytuł) 2.
+    grafika wyniku 1, przeciemnienie 2, treść (logo, strzałka, tytuł) 3.
   */
   .tile::before {
     content: '';
     position: absolute;
-    z-index: 1;
+    z-index: 2;
     inset-inline: 0;
     inset-block-end: 0;
     /*
@@ -275,7 +377,7 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
 
   .tile__logo {
     position: absolute;
-    z-index: 2;
+    z-index: 3;
     inset-block-start: var(--space-5);
     inset-inline-start: var(--space-5);
     display: block;
@@ -313,7 +415,7 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
 
   .tile__arrow {
     position: absolute;
-    z-index: 2;
+    z-index: 3;
     inset-block-start: var(--space-5);
     inset-inline-end: var(--space-5);
     background-color: var(--case-arrow-bg-media);
@@ -349,7 +451,7 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
 
   .tile__title {
     position: absolute;
-    z-index: 2;
+    z-index: 3;
     inset-block-end: var(--space-5);
     inset-inline: var(--space-5);
     max-width: var(--case-title-width);
@@ -483,8 +585,8 @@ const TILE_SIZES = '(min-width: 768px) min(50vw, 590px), 100vw'
       translate: 0 0;
     }
 
-    .tile:hover > :global(img),
-    .tile:focus-visible > :global(img),
+    .tile:hover .tile__media :global(img),
+    .tile:focus-visible .tile__media :global(img),
     .row:hover .row__logo :global(img),
     .row:focus-visible .row__logo :global(img) {
       scale: 1;

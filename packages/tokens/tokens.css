@@ -557,6 +557,14 @@
    */
   --case-tile-ratio: 8 / 7;
   /*
+   * Animowana karta wyniku jest składana nad zdjęciem dokładnie tam, gdzie
+   * znajduje się w dostarczonych kadrach referencyjnych.
+   */
+  --case-result-width: 49%;
+  --case-result-width-compact: 45%;
+  --case-result-offset-y: 24.5%;
+  --case-result-delay: 180ms;
+  /*
    * Przeciemnienie pod tytułem kafla. Wysokość jest STAŁA, nie procentem
    * wysokości kafla: gradient ma zasłonić dokładnie tyle kadru, ile zajmuje
    * dwuwierszowy tytuł z paddingiem, a to nie skaluje się z obrazkiem.

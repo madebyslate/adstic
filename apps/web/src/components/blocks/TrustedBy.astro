@@ -1,6 +1,6 @@
 ---
 import type { TrustedByBlock } from '@repo/shared'
-import { resolveVector } from '@/lib/media'
+import Picture from '@/components/ui/Picture.astro'
 
 interface Props {
   block: TrustedByBlock
@@ -13,7 +13,7 @@ const { quote, author } = block.testimonial
 /*
  * Dwa pasy: pierwsza połowa listy u góry, druga u dołu — tak jak w makiecie.
  * Przy jednym logotypie podział dałby pusty dolny pas, więc wtedy oba dostają
- * tę samą listę. To stan przejściowy: brakuje 9 z 10 plików (patrz spec).
+ * tę samą listę, dzięki czemu komponent obsługuje także minimalne poprawne dane.
  */
 const half = Math.ceil(block.logos.length / 2)
 const rows =
@@ -95,15 +95,7 @@ const tracks = rows.map((logos) => {
                 {Array.from({ length: track.copies }, () =>
                   track.logos.map((logo) => (
                     <li class="wall__tile">
-                      <img
-                        src={resolveVector(logo)}
-                        alt=""
-                        width={logo.width}
-                        height={logo.height}
-                        loading="lazy"
-                        decoding="async"
-                        draggable={false}
-                      />
+                      <Picture image={{ ...logo, alt: '' }} widths={[160]} sizes="160px" />
                     </li>
                   )),
                 )}
@@ -292,16 +284,14 @@ const tracks = rows.map((logos) => {
     justify-content: center;
     width: var(--logo-tile-size);
     height: var(--logo-tile-size);
-    padding: var(--space-5);
     border-radius: var(--radius-md);
     background-color: var(--color-surface-raised);
+    overflow: hidden;
   }
 
-  .wall__tile img {
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
+  .wall__tile :global(img) {
+    width: 100%;
+    height: 100%;
     object-fit: contain;
   }
 

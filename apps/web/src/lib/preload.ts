@@ -30,6 +30,19 @@ export async function getLcpPreload(blocks: Block[]): Promise<LcpPreload | null>
     return { href: src }
   }
 
-  const optimized = await getImage({ src, format: 'avif', width: image.width })
-  return { href: optimized.src, type: 'image/avif' }
+  // Ta sama lista co w `Hero.astro`: preload i `<img>` muszą zaoferować
+  // identyczne warianty, inaczej przeglądarka pobierze obraz dwa razy.
+  const widths = [768, 1280, 1920]
+  const variants = await Promise.all(
+    widths.map(async (width) => ({ width, image: await getImage({ src, format: 'avif', width }) })),
+  )
+  const largest = variants.at(-1)
+  if (!largest) return null
+
+  return {
+    href: largest.image.src,
+    type: 'image/avif',
+    imagesrcset: variants.map(({ width, image }) => `${image.src} ${width}w`).join(', '),
+    imagesizes: '100vw',
+  }
 }

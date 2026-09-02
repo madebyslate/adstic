@@ -219,6 +219,12 @@ const logoWidth = (logo: (typeof logos)[number]) =>
   .hero__video {
     position: absolute;
     inset: 0;
+    opacity: 0;
+    transition: opacity var(--duration-base) var(--ease-standard);
+  }
+
+  .hero__video[data-playing] {
+    opacity: 1;
   }
 
   /*
@@ -585,18 +591,23 @@ const logoWidth = (logo: (typeof logos)[number]) =>
   /*
    * `is:inline` jest tu obowiązkowe, nie stylistyczne: zwykły <script> Astro
    * WYNOSI z komponentu i dokleja do bundla strony niezależnie od warunku
-   * wokół niego. Skrypt trafiłby więc na stronę także wtedy, gdy w danych nie
-   * ma wideo — czyli dziś, przy samym obrazie tła. `is:inline` zostawia go
-   * w miejscu, więc bez `backgroundVideo` hero ma dokładnie 0 KB JS.
+   * wokół niego. Skrypt trafiłby więc także na stronę bez wideo. `is:inline`
+   * zostawia go w miejscu, więc bez `backgroundVideo` Hero ma 0 KB JS.
    *
-   * Sam skrypt (~0,3 KB, bez zależności) godzi trzy wymagania, których nie da
+   * Sam skrypt (~0,5 KB, bez zależności) godzi wymagania, których nie da
    * się pogodzić samym HTML-em — uzasadnienie w Hero.spec.md.
    */
   video && (
-    <script is:inline>
-      {`
-        var heroVideo = document.querySelector('[data-hero-video]')
-        if (heroVideo && window.matchMedia('(prefers-reduced-motion: no-preference)').matches) {
+    <script
+      is:inline
+      set:html={`
+        var startHeroVideo = function () {
+          var heroVideo = document.querySelector('[data-hero-video]')
+          if (!heroVideo || !window.matchMedia('(prefers-reduced-motion: no-preference)').matches) return
+
+          heroVideo.addEventListener('playing', function () {
+            heroVideo.setAttribute('data-playing', '')
+          }, { once: true })
           heroVideo.preload = 'auto'
           heroVideo.autoplay = true
           heroVideo.load()
@@ -605,7 +616,10 @@ const logoWidth = (logo: (typeof logos)[number]) =>
           // zostaje obraz tła i nic się nie psuje.
           if (played) played.catch(function () {})
         }
+
+        if (document.readyState === 'complete') startHeroVideo()
+        else window.addEventListener('load', startHeroVideo, { once: true })
       `}
-    </script>
+    />
   )
 }

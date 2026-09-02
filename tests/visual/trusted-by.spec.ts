@@ -47,8 +47,19 @@ test.describe('Blok TrustedBy', () => {
 
     // …a nazwy marek przychodzą z jednej ukrytej listy.
     const names = section.locator('ul.sr-only li')
-    await expect(names).toHaveCount(1)
-    await expect(names.first()).toHaveText('bura.')
+    await expect(names).toHaveCount(10)
+    await expect(names).toHaveText([
+      'Azardi',
+      'Bronson',
+      'bura.',
+      'Delta Optical',
+      'GoodNite',
+      'XO Partners',
+      'ProPrawni',
+      'RoboJet',
+      'Royal Puppy',
+      'SCEO LED Screen',
+    ])
   })
 
   test('kafel logotypu jest kwadratem i nie skaluje się z ekranem', async ({ page }) => {
@@ -58,6 +69,19 @@ test.describe('Blok TrustedBy', () => {
     expect(tile).not.toBeNull()
     expect(tile!.width).toBeCloseTo(160, 0)
     expect(tile!.height).toBeCloseTo(160, 0)
+  })
+
+  test('obraz logotypu wypełnia cały kafel 160 × 160', async ({ page }) => {
+    await page.goto('/')
+
+    const tile = page.locator(`${SECTION} .wall__tile`).first()
+    const image = tile.locator('img')
+    const [tileBox, imageBox] = await Promise.all([tile.boundingBox(), image.boundingBox()])
+
+    expect(tileBox).not.toBeNull()
+    expect(imageBox).not.toBeNull()
+    expect(imageBox!.width).toBeCloseTo(tileBox!.width, 0)
+    expect(imageBox!.height).toBeCloseTo(tileBox!.height, 0)
   })
 
   test('etykieta sekcji jest nagłówkiem, a kwadracik nie wchodzi do treści', async ({ page }) => {

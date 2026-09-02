@@ -25,6 +25,7 @@ ze zdjęciami (2 × 2), a na dole reszta realizacji jako lista z samym tytułem.
 | `featured[].external` | `boolean` | nie | dokłada `rel="noopener"` i `target` |
 | `featured[].logo` | `MediaImage` | tak | logo klienta w lewym górnym rogu kafla |
 | `featured[].thumbnail` | `MediaImage` | tak | kadr wypełniający kafel |
+| `featured[].resultGraphic` | `MediaImage` | tak | animowany SVG z wynikiem; osobna warstwa nad zdjęciem, `alt` pusty |
 | `more` | `ListedCaseStudy[]` | tak (może być puste) | wiersze listy; bez `thumbnail` |
 
 `featured` ma sztywną długość 4, bo układ przypisuje pozycję kolejności —
@@ -62,6 +63,12 @@ ma 480 px, a pigułka ~245 px — to zachowanie układu, nie osobny breakpoint.
 | logo | lewy górny róg, 24 px od krawędzi, rozmiar własny, cap 64 × 160 px | domierzone |
 | strzałka | 48 px, `rgba(0,0,0,.5)`, prawy górny róg, 24 px od krawędzi | klient |
 | tytuł | 20 px / 500, `--color-fg`, maks. 320 px, 24 px od dolnej i lewej krawędzi | klient (600 → patrz „Otwarte pytania") |
+| grafika wyniku | 49% szerokości kafla; 45% dla węższych paneli, wyśrodkowana, 24,5% od góry | pozycja i skala z czterech dostarczonych kadrów referencyjnych |
+
+Grafika wyniku nie jest częścią zdjęcia. Leży na osobnym piętrze między kadrem
+a dolnym przeciemnieniem, więc podmiana zdjęcia na wersję bez wtopionej grafiki
+nie wymaga zmiany komponentu ani ponownego eksportu całego kafla. Jest
+dekoracyjna dla czytnika ekranu: tytuł linku już podaje ten sam wynik.
 
 ### Wiersz listy
 
@@ -103,9 +110,13 @@ więc afordancja jest potrzebna; wzór wzięty z `--faq-panel-bg-hover`.
 | uniesienie tytułu kafla | hover / focus | `--duration-base` | `--ease-standard` | `translate: 0` |
 | wejście sekcji: etykieta, nagłówek, lead, przycisk, kafle, wiersze | wjazd sekcji w kadr (grupa `data-reveal-group`) | `--duration-reveal` (0,9 s), krok `--reveal-step` | `--ease-out-expo` | wyłączone globalnie — ląduje na klatce końcowej |
 | przycisk: czerwony kłąb spod kursora | hover / fokus | `--duration-slow` (kłąb), `--duration-base` (etykieta) | `--ease-out-expo` | wyłączone globalnie |
+| SVG „wzrost” | 28% kafla w kadrze + 180 ms | panel i tekst 0,72 s; linia 1,7 s; punkt 0,48 s | expo-out + symetryczne rysowanie | kompletna klatka od razu |
+| SVG „zapytania” | 28% kafla w kadrze + 180 ms | słupki kolejno co 40 ms; aktywny słupek po 1,14 s | expo-out | wszystkie słupki od razu |
+| SVG „leady” | 28% kafla w kadrze + 180 ms | obręcz tła 0,9 s; wynik 1,45 s; teksty w trzech krokach | symetryczne rysowanie + expo-out | kompletna klatka od razu |
+| SVG „wzrost +55%” | 28% kafla w kadrze + 180 ms | linia 1,65 s; punkt 0,5 s | expo-out + symetryczne rysowanie | kompletna klatka od razu |
 
-Rusza się ZDJĘCIE, nie kafel: kafel przycina (`overflow: hidden`), więc jego
-krawędzie, logo i tytuł stoją w miejscu — a powiększenie kafla przesuwałoby
+Rusza się ZDJĘCIE, nie kafel ani grafika wyniku: kafel przycina (`overflow: hidden`), więc jego
+krawędzie, wykres, logo i tytuł stoją w miejscu — a powiększenie kafla przesuwałoby
 sąsiadów w siatce i tak by nie zadziałało, bo `<li>` niesie animację wejścia
 wypełniającą `transform` (PLAYBOOK P-057).
 
@@ -123,6 +134,13 @@ blisko, by warto ją było odegrać. Kolejność niesie `--reveal-index` w marku
 — etykieta 0, nagłówek 1, lead 2, przycisk 3, kafle 4+, wiersze 5+. Mechanizm opisany przy „W polu widzenia" w `global.css`,
 uzasadnienie w `DECISIONS.md` (2026-08-27, system wejść w CSS).
 
+Osobny obserwator dotyczy tylko dokumentów SVG: ich `src` nie istnieje przed
+wejściem konkretnego kafla w viewport. Przy progu 28% observer odczekuje token
+`--case-result-delay` (180 ms), po czym ustawia `src` i uruchamia wewnętrzną
+choreografię od pierwszej klatki. Przy redukcji ruchu opóźnienie wynosi 0 ms,
+a media query wewnątrz SVG pokazuje gotowy wykres. `<noscript>` zachowuje
+kompletny wynik bez JavaScriptu.
+
 Hover kontrolek jest wspólny dla całego projektu — klasa `.btn-wipe`
 w `global.css`, uzasadnienie w `DECISIONS.md` (2026-08-27, jeden hover).
 Blok podaje wyłącznie kolory, mechaniki nie powtarza.
@@ -131,12 +149,15 @@ Blok podaje wyłącznie kolory, mechaniki nie powtarza.
 
 | Pozycja | Budżet | Faktycznie |
 |---|---|---|
-| JS (skompresowany) | 0 KB | **0 KB** — blok nie dokłada ani jednego skryptu |
-| Requesty | — | 11 obrazów (4 kadry + 4 loga na kaflach + 3 loga wierszy), wszystkie `lazy` |
-| Największy zasób | — | `construction.avif` 30 KB (źródło JPG 148 KB) |
+| JS (skompresowany) | < 0,5 KB | 413 B gzip: observer wejścia i opóźnione ustawienie `src` |
+| Requesty | — | 16 obrazów (4 kadry + 4 SVG wyników + 4 loga na kaflach + 3 loga wierszy + twarz CTA), wszystkie `lazy` |
+| Największy SVG wyniku | — | `result-skydiving-growth.svg`: 44 951 B surowo, 17 509 B gzip |
 
-Wszystkie obrazy są pod foldem i idą `loading="lazy"` — priorytet zostaje przy
-elemencie LCP w `Hero`.
+Pozostałe SVG wyników mają po gzip: wzrost 9 488 B, zapytania 10 345 B,
+leady 11 688 B. Są leniwe, więc nie wchodzą do transferu pierwszego ekranu.
+
+Wszystkie obrazy są pod foldem i idą `loading="lazy"`; cztery SVG dodatkowo nie
+mają `src` przed wejściem kafla w viewport. Priorytet zostaje przy LCP w `Hero`.
 
 ## A11y
 
@@ -148,8 +169,10 @@ elemencie LCP w `Hero`.
   treścią; strzałki są `aria-hidden`, bo kierunek niesie już sam link.
 - Kontrast: tytuły `--color-fg` na przeciemnieniu `#181B18` ≈ 15:1; `lead`
   `--color-fg-muted` (60 %) na `--color-bg` ≈ 8:1 — oba ponad AA.
-- Źródło `alt`: `thumbnail.alt` i `logo.alt` są puste (dekoracja), treść niesie
-  `title`.
+- Źródło `alt`: `thumbnail.alt`, `resultGraphic.alt` i `logo.alt` są puste
+  (dekoracja), treść niesie `title`.
+- redukcja ruchu wewnątrz każdego SVG pokazuje od razu kompletną klatkę i
+  wyłącza subtelne pętle punktu, obręczy i aktywnego słupka.
 
 ## Otwarte pytania
 

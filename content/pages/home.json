@@ -17,11 +17,31 @@
       "heading": "Mniej zgadywania więcej zamówień",
       "subheading": "Prowadzimy kampanie reklamowe dla sklepów Shopify polskich producentów – tak, żeby każda złotówka budżetu wróciła do Ciebie z odpowiednią marżą.",
       "background": {
-        "src": "content/media/hero-background.jpg",
+        "src": "content/media/hero-bg-poster.avif",
         "alt": "",
-        "width": 1440,
-        "height": 810
+        "width": 1920,
+        "height": 1198
       },
+      "backgroundVideo": [
+        {
+          "src": "/video/hero-bg-mobile.av1.mp4",
+          "type": "video/mp4; codecs=av01.0.04M.08",
+          "media": "(max-width: 768px)"
+        },
+        {
+          "src": "/video/hero-bg-mobile.mp4",
+          "type": "video/mp4",
+          "media": "(max-width: 768px)"
+        },
+        {
+          "src": "/video/hero-bg.av1.mp4",
+          "type": "video/mp4; codecs=av01.0.08M.08"
+        },
+        {
+          "src": "/video/hero-bg.mp4",
+          "type": "video/mp4"
+        }
+      ],
       "cta": {
         "label": "Zwiększmy liczbę zamówień",
         "href": "/contact/"
@@ -54,10 +74,64 @@
       },
       "logos": [
         {
-          "src": "content/media/logos/logo-bura.svg",
+          "src": "content/media/logos/azardi.png",
+          "alt": "Azardi",
+          "width": 160,
+          "height": 160
+        },
+        {
+          "src": "content/media/logos/bronson.png",
+          "alt": "Bronson",
+          "width": 160,
+          "height": 160
+        },
+        {
+          "src": "content/media/logos/bura.png",
           "alt": "bura.",
-          "width": 65,
-          "height": 64
+          "width": 160,
+          "height": 160
+        },
+        {
+          "src": "content/media/logos/delta.png",
+          "alt": "Delta Optical",
+          "width": 160,
+          "height": 160
+        },
+        {
+          "src": "content/media/logos/goodnite.png",
+          "alt": "GoodNite",
+          "width": 160,
+          "height": 160
+        },
+        {
+          "src": "content/media/logos/okpartners.png",
+          "alt": "XO Partners",
+          "width": 160,
+          "height": 160
+        },
+        {
+          "src": "content/media/logos/proprawni.png",
+          "alt": "ProPrawni",
+          "width": 160,
+          "height": 160
+        },
+        {
+          "src": "content/media/logos/robojet.png",
+          "alt": "RoboJet",
+          "width": 160,
+          "height": 160
+        },
+        {
+          "src": "content/media/logos/royalpuppy.png",
+          "alt": "Royal Puppy",
+          "width": 160,
+          "height": 160
+        },
+        {
+          "src": "content/media/logos/sceoled.png",
+          "alt": "SCEO LED Screen",
+          "width": 160,
+          "height": 160
         }
       ]
     },
@@ -149,6 +223,12 @@
             "alt": "",
             "width": 861,
             "height": 780
+          },
+          "resultGraphic": {
+            "src": "content/media/casestudies/result-growth.svg",
+            "alt": "",
+            "width": 283,
+            "height": 179
           }
         },
         {
@@ -165,6 +245,12 @@
             "alt": "",
             "width": 861,
             "height": 780
+          },
+          "resultGraphic": {
+            "src": "content/media/casestudies/result-inquiries.svg",
+            "alt": "",
+            "width": 260,
+            "height": 161
           }
         },
         {
@@ -181,6 +267,12 @@
             "alt": "",
             "width": 861,
             "height": 780
+          },
+          "resultGraphic": {
+            "src": "content/media/casestudies/result-leads.svg",
+            "alt": "",
+            "width": 260,
+            "height": 179
           }
         },
         {
@@ -197,6 +289,12 @@
             "alt": "",
             "width": 861,
             "height": 780
+          },
+          "resultGraphic": {
+            "src": "content/media/casestudies/result-skydiving-growth.svg",
+            "alt": "",
+            "width": 280,
+            "height": 179
           }
         }
       ],

@@ -19,11 +19,11 @@ które przewijają się w dwóch pasach (marquee). Występuje na `home`.
 | `testimonial.quote` | `string` | tak | bez cudzysłowów w danych; typograficzne „ ” dokłada CSS |
 | `testimonial.author.name` | `string` | tak | |
 | `testimonial.author.role` | `string` | nie | np. „Founder domupielesze.pl”; ukośnik przed rolą jest ozdobą z makiety, nie danymi |
-| `logos` | `MediaImage[]` | tak (min 1) | SVG z `content/media/logos/`. `alt` = nazwa marki, przychodzi od klienta |
+| `logos` | `MediaImage[]` | tak (min 1) | PNG 160 × 160 z `content/media/logos/`. `alt` = nazwa marki |
 
 Logotypy dzielą się na dwa pasy po połowie listy, w kolejności z danych —
 pierwsza połowa u góry, druga u dołu. Przy jednym logotypie oba pasy dostają
-tę samą listę (stan przejściowy, dopóki brakuje plików).
+tę samą listę, żeby dolny pas nie został pusty.
 
 ## Wygląd
 
@@ -38,7 +38,7 @@ Wartości podane przez klienta, wszystkie wprowadzone jako tokeny:
 | opinia | bez własnego tła, padding 22 px | `--quote-padding` |
 | cytat | 18 px / 400, `rgb(254 255 241 / 0.6)` | `--text-lg`, `--color-fg-muted` |
 | autor | 16 px / 400, `#FEFFF1`; rola z `opacity: 0.6` | `--text-base`, `--color-fg` |
-| kafel logotypu | 160 × 160 px, `radius 8px`, `#0F110F` | `--logo-tile-size`, `--radius-md`, `--color-surface-raised` |
+| kafel i obraz logotypu | 160 × 160 px, `radius 8px`, `#0F110F`; obraz bez dodatkowego paddingu komponentu | `--logo-tile-size`, `--radius-md`, `--color-surface-raised` |
 | odstęp kafli | 2 px | `--logo-tile-gap` |
 
 Tło jest JEDNO na całą szerokość kolumny — opinia i kafle leżą na wspólnej
@@ -113,11 +113,15 @@ uzasadnienie w `DECISIONS.md` (2026-08-27, system wejść w CSS).
 | Pozycja | Budżet | Faktycznie |
 |---|---|---|
 | JS (skompresowany) | 0 KB | 0 KB — marquee jest czystym CSS |
-| Requesty | 1 na logotyp | +1 do strony (dziś jeden logotyp): 7 → 9 razem z arkuszem bloku |
-| Największy zasób | — | `logo-bura.svg`, 5 KB |
+| Requesty | 1 na unikalny logotyp | 10 logotypów, ładowane leniwie |
+| Największy zasób | — | `delta.png`: 7,3 KB źródła, 2 KB po optymalizacji Astro |
 
 Pomiar całej strony po dołożeniu bloku (`pnpm lighthouse`, 3 przebiegi):
 100/100/100/100, LCP 1,50 s, TBT 0 ms, CLS 0,001, CSS 6 KB, JS 0 KB.
+
+Pomiar po podmianie kompletu logo (2026-09-02, 3 przebiegi): performance
+97–98, accessibility 96, best practices 96, SEO 100; LCP 2265–2274 ms,
+TBT 0 ms, CLS 0,0184. Wszystkie budżety z `lighthouserc.json` przeszły.
 
 Kopie logotypów w torze nie kosztują żądań — przeglądarka pobiera każdy plik
 raz i renderuje z cache.
@@ -132,12 +136,11 @@ raz i renderuje z cache.
   markę raz.
 - Kontrast: cytat `rgb(254 255 241 / 0.6)` na `#090B09` ≈ 8,7:1, badge
   `#FEFFF1` na tle ≈ 17:1, rola autora (0.6 na `#090B09`) ≈ 8,7:1.
-- `alt` logotypu = nazwa marki, wpisana z `_inbox/logos-klientow/alt.txt`.
+- `alt` logotypu = odczytana nazwa marki; animowane kopie są ukryte, a nazwy
+  trafiają do czytnika z pojedynczej listy.
 
 ## Otwarte pytania
 
-- [ ] Brakuje 9 z 10 logotypów z makiety (jest tylko `bura`). Potrzebne pliki
-      SVG w `_inbox/logos-klientow/` + `alt.txt`.
 - [ ] `Google Sans Code` — plik `.woff2` (wagi 500) do self-hostingu.
 - [ ] Kierunki i prędkość przewijania pasów — makieta jest statyczna.
 - [ ] Czy logotypy mają być linkami do case studies?

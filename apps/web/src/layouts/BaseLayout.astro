@@ -122,6 +122,11 @@ const { seo, path } = Astro.props
       zatwierdzone, patrz DECISIONS.md. Silnik jedzie dynamicznym importem poza
       głównym bundlem, a użytkownik z `prefers-reduced-motion: reduce` nie
       pobiera go w ogóle.
+
+      `window.adsticScrollByWheel` jest jedynym wejściem dla kodu, który dostaje
+      deltę kółka POZA oknem strony (dziś: dokument SVG w iframe `OurImpact`).
+      Native `scrollBy` w takim miejscu bije się z Lenis: Lenis w każdej klatce
+      wpisuje własną pozycję, więc strona skacze między dwoma źródłami prawdy.
     */}
     <script>
       type LenisInstance = import('lenis').default
@@ -151,6 +156,18 @@ const { seo, path } = Astro.props
       const disableSmoothScroll = () => {
         lenis?.destroy()
         lenis = undefined
+      }
+
+      window.adsticScrollByWheel = (deltaX, deltaY) => {
+        if (!lenis) {
+          window.scrollBy(deltaX, deltaY)
+          return
+        }
+
+        // `programmatic: false` — to jest wejście użytkownika, nie skok kodu:
+        // Lenis dokłada deltę do własnego celu i wygładza ją tak samo jak
+        // kółko nad zwykłą częścią strony.
+        lenis.scrollTo(lenis.targetScroll + deltaY, { programmatic: false })
       }
 
       enableSmoothScroll()

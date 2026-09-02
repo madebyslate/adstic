@@ -9,9 +9,9 @@ async function settle(page: import('@playwright/test').Page) {
 
   const section = page.locator(SECTION)
   await section.scrollIntoViewIfNeeded()
-  // 4 kadry + 4 loga na kaflach + 3 loga wierszy + twarz w pigułce CTA.
+  // 4 kadry + 4 SVG wyników + 4 loga na kaflach + 3 loga wierszy + twarz CTA.
   // Wszystkie `lazy` — bez tego snapshot łapie sekcję z pustymi kaflami.
-  await expect(section.locator('img')).toHaveCount(12)
+  await expect(section.locator('img')).toHaveCount(16)
   await page.waitForFunction((selector) => {
     const node = document.querySelector(selector)
     return [...(node?.querySelectorAll('img') ?? [])].every(
@@ -117,6 +117,62 @@ test.describe('Blok CaseStudies', () => {
     // Wszystko pod foldem — priorytet zostaje przy elemencie LCP w hero.
     for (const img of await section.locator('img').all()) {
       await expect(img).toHaveAttribute('loading', 'lazy')
+    }
+  })
+
+  test('każdy wyróżniony kafel ma osobną, leniwą grafikę wyniku', async ({ page }) => {
+    const section = await settle(page)
+    const graphics = section.locator('.tile__result')
+
+    await expect(graphics).toHaveCount(4)
+    await expect(graphics.nth(0)).toHaveAttribute('src', /result-growth/)
+    await expect(graphics.nth(1)).toHaveAttribute('src', /result-inquiries/)
+    await expect(graphics.nth(2)).toHaveAttribute('src', /result-leads/)
+    await expect(graphics.nth(3)).toHaveAttribute('src', /result-skydiving-growth/)
+
+    for (const graphic of await graphics.all()) {
+      await expect(graphic).toHaveAttribute('alt', '')
+      await expect(graphic).toHaveAttribute('loading', 'lazy')
+    }
+  })
+
+  withMotion('warstwy danych w czterech SVG są animowane', async ({ page }) => {
+    await page.goto('/')
+    const sources = await page.locator('.tile__result').evaluateAll((nodes) =>
+      nodes.map((node) => (node as HTMLImageElement).src),
+    )
+    const animatedLayerIds = ['chart-fill', 'chart-fill', 'chart-fill', 'chart-reveal']
+
+    for (const [index, source] of sources.entries()) {
+      await page.goto(source)
+      const animationName = await page.locator(`#${animatedLayerIds[index]}`).evaluate(
+        (node) => getComputedStyle(node).animationName,
+      )
+      expect(animationName).not.toBe('none')
+    }
+  })
+
+  test('redukcja ruchu pokazuje kompletne wykresy bez animacji', async ({ page }) => {
+    await page.goto('/')
+    const sources = await page.locator('.tile__result').evaluateAll((nodes) =>
+      nodes.map((node) => (node as HTMLImageElement).src),
+    )
+    const animatedLayerIds = ['chart-fill', 'chart-fill', 'chart-fill', 'chart-reveal']
+
+    for (const [index, source] of sources.entries()) {
+      await page.goto(source)
+      const state = await page.locator(`#${animatedLayerIds[index]}`).evaluate((node) => {
+        const style = getComputedStyle(node)
+        return {
+          animationName: style.animationName,
+          strokeDashoffset: style.strokeDashoffset,
+          transform: style.transform,
+        }
+      })
+
+      expect(state.animationName).toBe('none')
+      expect(state.strokeDashoffset).toBe('0px')
+      expect(state.transform).toBe('none')
     }
   })
 })

@@ -1658,3 +1658,76 @@ niesie tyle samo co snapshot. Zostaje pomiar przy zmianie treści.
 makiety.** Przy pierwszym tłumaczeniu przejdź breakpointy i policz wiersze
 nagłówków — nie tylko hero. Jeśli starter ma być wielojęzyczny, najdłuższy
 wariant językowy jest tym, pod który dobiera się kolumnę.
+
+### P-066 — skala nad `<iframe>` rasteruje zagnieżdżony dokument w każdej klatce
+
+**Objaw.** Sekcja z osadzonym w iframe dokumentem (u nas animowany panel SVG)
+zacina się dokładnie przez czas, w którym przejeżdża przez kadr. Smooth scroll
+(Lenis) traci płynność na tej jednej sekcji, a pojedyncze grupy wewnątrz SVG
+odjeżdżają od swojej pozycji — u nas znak Google Ads w `3-box-row`, wcześniej
+znak Meta w tym samym pliku. Poza sekcją strona jest gładka.
+
+**Przyczyna.** Na wrapperze iframe siedziała klasa `scroll-settle`
+(`animation-timeline: view()`, `transform: scale(1.08 → 1)`, `will-change`).
+Transformacja przesuwająca element jest tania — element jedzie jako gotowa
+warstwa. **Skala nie jest**: przy każdej nowej wartości skali zawartość musi
+zostać zrasteryzowana od nowa, a zawartością jest tu cały osobny dokument
+(0,5 MB ścieżek) z własnymi animacjami. Do tego zagnieżdżone grupy SVG, które
+same mają animowany `transform`, dostają wtedy inną skalę rasteryzacji niż
+rodzic i widocznie dryfują — to nie jest błąd geometrii w pliku, tylko
+niedopasowanie warstw.
+
+**Fix.** Nie skaluj elementu, który zawiera osobny dokument (`<iframe>`,
+`<object>`, `<embed>`, `<video>`). Wejście takiego panelu odgrywa sam
+zagnieżdżony dokument — ma do tego własny CSS i własny zegar. Osobno: pętle
+animacji w zagnieżdżonym dokumencie zatrzymuj z zewnątrz, gdy wypadnie z kadru
+(klasa na jego root + `animation-play-state: paused`; własność się NIE
+dziedziczy, więc `style.animationPlayState` na roocie nic nie da).
+
+**Wyłapuje.** ⚠️ Nic automatycznie. Snapshot łapie klatkę, nie koszt klatki, a
+Lighthouse mierzy start strony, nie przejazd przez sekcję w środku. Zostaje
+Performance w DevTools: nagraj przewijanie przez sekcję i szukaj ciągłego
+paska „Raster”/„Paint” zamiast samego „Composite Layers”.
+
+**Do startera.** Reguła: **oś czasu `view()` steruje przezroczystością
+i przesunięciem, nie skalą — a nad zagnieżdżonym dokumentem nie steruje niczym.**
+Jeśli projekt osadza obcy dokument, jego animacje należą do niego; strona
+odpowiada wyłącznie za to, kiedy je włączyć i wyłączyć.
+
+### P-067 — hover nad zagnieżdżonym SVG zamienia scroll w szarpanie
+
+**Objaw.** Przejazd przez sekcję jest gładki, dopóki nie najedziesz kursorem na
+element z hoverem wewnątrz osadzonego dokumentu SVG. Od tego momentu scroll
+w tej sekcji skacze — i nie przestaje, bo kursor stoi nad panelem, a strona
+przesuwa pod nim kolejne karty.
+
+**Przyczyna.** Hover jest tam `transform` na grupie SVG z przejściem 360 ms.
+Transformacji SVG Chrome **nie kompozytuje**: przez cały czas trwania przejścia
+przemalowuje CAŁY dokument panelu. Przy scrollowaniu kursor wchodzi na kolejne
+karty, zanim poprzednia zdąży wrócić, więc przemalowania się nakładają i zjadają
+wątek główny. Smooth scroll (Lenis) liczy pozycję na tym samym wątku, więc gubi
+klatki i nadrabia je skokiem — użytkownik widzi szarpanie, choć zepsute jest
+malowanie, nie scroll.
+
+Osobno warto wiedzieć, że nie da się tego naprawić od środka: `will-change`,
+`translate3d` ani warstwa na `opacity` nie promują grupy SVG do kompozytora.
+
+**Fix.** Skasować hover. Próba ratowania go zdejmowaniem kursora na czas
+przejazdu (`data-scrolling` na `<html>` → `pointer-events: none` na iframe,
+plus klasa wyłączająca przejścia w środku) była w Adsticu napisana i **nie
+wystarczyła**: wystarczy raz aktywować hover i jechać dalej, żeby przemalowania
+poszły — a między pierwszym zdarzeniem scrolla a zdjęciem kursora zawsze jest
+kilka klatek, w których stan już żyje. Dopóki hover jest `transform` na grupie
+SVG, jedynym rozwiązaniem jest jego brak.
+
+Kiedy ma wrócić, musi mieć nośnik, który kompozytor przyjmie: element HTML
+nałożony NAD panelem (osobna warstwa, `transform`/`opacity`), a nie grupa
+w środku dokumentu. Wtedy koszt hoveru nie zależy od tego, ile ścieżek ma SVG.
+
+**Wyłapuje.** ⚠️ Nic automatycznie — snapshot łapie klatkę, nie koszt klatki.
+Objaw widać w Performance w DevTools: nagraj przewijanie z kursorem nad
+panelem i szukaj pasm „Paint”/„Raster” szerszych niż ramka klatki.
+
+**Do startera.** Reguła: **osadzony dokument nie przyjmuje kursora, gdy strona
+jedzie.** Dotyczy każdego iframe z interaktywną grafiką; hover ma sens, gdy
+użytkownik patrzy, a nie gdy przewija obok.

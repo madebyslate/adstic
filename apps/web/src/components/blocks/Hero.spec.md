@@ -7,7 +7,7 @@
 
 ## Czym jest
 
-Pierwszy ekran strony głównej: pełnoekranowe tło (obraz, docelowo wideo),
+Pierwszy ekran strony głównej: pełnoekranowe tło (pierwsza klatka, potem wideo),
 nagłówek H1 z gradientem, opis, CTA i pasek zaufania. Za treścią rysunek orbity
 z logotypami platform reklamowych, na których pracuje agencja.
 
@@ -34,10 +34,9 @@ Schemat: `packages/shared/src/blocks/Hero.ts`.
 ### Dlaczego `background` + `backgroundVideo`, a nie `MediaVideo`
 
 `MediaVideo` wymaga niepustych `sources`. Hero ma działać także wtedy, gdy wideo
-jeszcze nie istnieje (dziś tak jest — `_inbox/wideo/` jest puste), więc użycie
-`MediaVideo` zmuszałoby do wpisania fikcyjnych źródeł tylko po to, żeby przejść
-walidację. Rozdzielenie pól pozwala dołożyć wideo bez ruszania komponentu:
-obraz zostaje posterem i elementem LCP niezależnie od tego, czy wideo jest.
+nie jest jeszcze dostępne albo nie może się odtworzyć, więc obraz musi pozostać
+niezależnym, wymaganym fallbackiem. Rozdzielenie pól pozwala wymienić lub usunąć
+wideo bez ruszania komponentu: obraz zostaje posterem i elementem LCP.
 
 ## Wartości wizualne
 
@@ -96,7 +95,7 @@ Przejścia: `--duration-fast` + `--ease-standard`, wyłącznie `color`/`opacity`
 | Co | Kiedy | Czas | Easing | `reduce` |
 |---|---|---|---|---|
 | logotypy krążą po orbicie | zawsze | 96 s / pełne okrążenie | `linear` | **wyłączone**, tarcze stoją w pozycjach z makiety |
-| autoplay wideo tła | po starcie strony, **tylko gdy** `backgroundVideo` jest w danych | — | — | **wyłączone**, zostaje obraz |
+| autoplay wideo tła | po zdarzeniu `window.load`; film staje się widoczny dopiero przy `playing` | `--duration-base` (fade) | `--ease-standard` | **wyłączone**, zostaje obraz |
 | wejście treści (nagłówek → lead → CTA → pasek zaufania) | pierwsza klatka, bez obserwatora | 0,9 s, krok 90 ms | `--ease-out-expo` | ląduje na klatce końcowej natychmiast |
 | wejście tła i orbity | pierwsza klatka | 0,9 s | `--ease-out-expo` | jw. |
 | parallaxa kadru przy wyjściu hero | funkcja pozycji scrolla, `exit 0%…100%` | — | `linear` | **wyłączone**, kadr stoi w pozycji z makiety |
@@ -156,24 +155,25 @@ Zmierzone: `pnpm lighthouse`, 3 przebiegi, mobile/4G, build produkcyjny.
 
 | Pozycja | Budżet | Faktycznie |
 |---|---|---|
-| JS bloku (skompresowany) | 0 KB | **0 KB** — blok nie wysyła własnego skryptu |
-| JS strony (skompresowany) | — | 5,7 KB: 1,0 KB obserwator + Lenis, 4,7 KB silnik Lenisa (dynamiczny import) — DECISIONS 2026-08-27 |
-| Requesty przy starcie | < 30 | **7** |
-| Transfer łącznie | — | 106 KB |
-| Fonty | — | 80 KB (2 × ~40 KB, subset latin + latin-ext) |
-| Obraz tła (LCP) | ≤ 150 KB AVIF | **4 KB** AVIF |
-| CSS | < 50 KB | 4 KB (przesłane) / 12,7 KB (rozpakowane) |
-| HTML | — | 38 KB, z czego 19,7 KB to inline SVG orbity |
+| JS bloku (skompresowany) | 0 KB | **0,5 KB inline** — start dopiero po `window.load`, bez zależności |
+| JS strony (skompresowany) | — | **6,6 KB**: obserwator + Lenis (dynamiczny import) |
+| Requesty przy starcie | < 30 | **29** (wideo startuje dopiero po `window.load`) |
+| Transfer łącznie | — | **245–262 KB** (zależnie od początku drugiej pętli wideo w oknie audytu) |
+| Fonty | — | **82 KB** (2 × ~41 KB, subset latin + latin-ext) |
+| Obraz tła (LCP) | ≤ 150 KB AVIF | **5,6 KB** w audycie mobile / 8 KB wariant 1920 px |
+| Wideo tła | ≤ 2 MB desktop / ≤ 1 MB mobile | **74 KB AV1 / 520 KB H.264 desktop; 16 KB / 51 KB mobile** |
+| CSS | < 50 KB | **19,9 KB** transferu |
+| HTML | — | **31,9 KB** transferu |
 | Animacja orbity (1440×900) | 60 fps | 119 fps, mediana klatki 8,3 ms, główny wątek 5,2 % |
-| LCP | < 2,5 s | **2,04 s** |
+| LCP | < 2,5 s | **2,19 s** (mediana z 3 przebiegów) |
 | TBT | < 200 ms | **0 ms** |
-| CLS | < 0,1 | **0,000** |
+| CLS | < 0,1 | **0,018** |
 
 Lighthouse: performance 98, accessibility 96, best-practices 96, SEO 100.
 
-Pomiar po dołożeniu ruchu (3 przebiegi, mobile/4G, 4× CPU). TBT i CLS zostały
-na zerze — animacje wejścia, parallaxy i hover przycisków liczy kompozytor, nie
-wątek główny.
+Pomiar po podłączeniu wideo (2026-09-02; 3 przebiegi, mobile/4G, 4× CPU).
+Responsywny preload z `imagesrcset` pobiera tylko jeden wariant postera; bez
+niego audyt pokazał dwa requesty tego samego obrazu (1920 i 1280 px).
 
 Accessibility 96, nie 100, z powodu JEDNEGO kontrastu poza tym blokiem: zdanie
 pod logo w stopce (`.footer__tagline`) stoi na `--color-fg-faint`, czyli bieli
@@ -183,20 +183,19 @@ sprzed tej zmiany, audyt po prostu zaczął ten węzeł raportować. Podniesieni
 krycia do 50 % daje 5,30 : 1 i wraca do 100, ale jest decyzją projektową:
 `--color-fg-faint` obsługuje też trzy miejsca w `Contact`.
 
-### Dlaczego 0 KB JS mimo skryptu autoplay
+### Dlaczego 0,5 KB inline JS
 
 Skrypt jest w komponencie, ale renderuje się **tylko** gdy w danych jest
 `backgroundVideo` — i musi być `is:inline`, bo zwykły `<script>` Astro wynosi
-z komponentu do bundla strony niezależnie od warunku wokół niego. Dziś, przy
-samym obrazie tła, blok nie wysyła ani bajta **własnego** JS. Pilnuje tego test
-„bez wideo w danych blok nie wysyła ani bajta własnego JS", który przepuszcza
-wyłącznie skrypty ruchu z `BaseLayout` — te są budżetem strony, nie bloku.
+z komponentu do bundla strony niezależnie od warunku wokół niego. Skrypt czeka
+na pełne załadowanie strony, dopiero wtedy zmienia `preload` i uruchamia film.
+Warstwa wideo pozostaje przezroczysta aż do zdarzenia `playing`, więc nie ma
+czarnej klatki między posterem a pierwszą klatką filmu.
 
-Gdy wideo dojdzie, wracają ~0,3 KB i uzasadnienie jest nadal to samo: trzeba
-naraz spełnić `preload="none"` (żeby wideo nie konkurowało o pasmo przed LCP),
-uszanować `prefers-reduced-motion: reduce` i zostawić widoczną treść bez JS.
-Atrybut `autoplay` w HTML jest bezwarunkowy, więc drugiego warunku nie da się
-spełnić deklaratywnie.
+JS jest potrzebny, żeby naraz spełnić `preload="none"` (wideo nie konkuruje
+z LCP), `prefers-reduced-motion: reduce` i poprawny fallback bez JS. Testy
+pilnują odtwarzania, braku pobierania przy `reduce` i obecności każdego źródła
+w buildzie.
 
 ## A11y
 
@@ -287,9 +286,6 @@ spełnić deklaratywnie.
       obrócona o 90°, patrz „Odstępstwa" p. 6) — do potwierdzenia z ramką
       390 px w Figmie, bo obrót jest decyzją kodu, nie projektu.
       Menu mobilne (hamburger) czeka na projekt.
-- [ ] **Wideo tła.** Zrzut `_inbox/images/adstic-hero-bg.jpg` niesie w metadanych
-      ślad `Lavc61` — to klatka z wideo. Jeśli tło ma być ruchome, potrzebne jest
-      surowe źródło w `_inbox/wideo/` (`scripts/encode-video.sh` zrobi resztę).
 - [ ] **Loga klientów pojedynczo** + linia `alt` dla każdego
       (`_inbox/logos-klientow/alt.txt`). Dziś w pasku stoi gotowa grupa
       w jednym pliku, dekoracyjnie — patrz „Odstępstwa" p. 5.

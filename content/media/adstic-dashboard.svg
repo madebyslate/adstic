@@ -99,37 +99,15 @@
     animation: data-live 2800ms 1800ms ease-in-out infinite alternate;
   }
 
-  [id^="box"],
-  #brand-name,
-  #range-tabs,
-  #date-dropdown,
-  #left-menu > g {
-    transition: transform 360ms cubic-bezier(0.2, 0, 0, 1), opacity 360ms cubic-bezier(0.2, 0, 0, 1);
-  }
+  /*
+    Panel NIE ma dziś żadnego hoveru — celowo, patrz PLAYBOOK P-067.
 
-  [id^="box"]:hover {
-    transform: translateY(-4px);
-  }
-
-  #box_3,
-  #box_3:hover {
-    transform: none;
-  }
-
-  [id^="box"]:hover g[id^="chart"] {
-    animation-duration: 900ms;
-  }
-
-  #brand-name:hover,
-  #range-tabs:hover,
-  #date-dropdown:hover {
-    transform: translateY(-2px);
-  }
-
-  #left-menu > g:hover {
-    opacity: 1;
-    transform: translateX(5px);
-  }
+    Hover był tu `transform` na grupie SVG, a transformacji SVG Chrome nie
+    kompozytuje: przejście trzymało 360 ms przemalowaniami CAŁEGO dokumentu.
+    Wystarczyło raz aktywować hover i jechać dalej, żeby te przemalowania
+    zajechały wątek główny i smooth scroll strony zaczął skakać. Zanim hover
+    wróci, musi mieć nośnik, który da się skompozytować — grupa SVG nim nie jest.
+  */
 
   @keyframes panel-open {
     from { opacity: 0; transform: scaleX(0.94); }
@@ -167,6 +145,16 @@
     to { transform: translateY(-0.5px); }
   }
 
+  /*
+    Zatrzymanie z zewnątrz: strona dokłada `is-paused` na root, gdy panel wyjdzie
+    z kadru. Pętle wykresów to transformacje SVG, których Chrome nie kompozytuje
+    — bez tego cały dokument przemalowuje się 60 razy na sekundę także wtedy,
+    gdy nikt na niego nie patrzy.
+  */
+  .is-paused * {
+    animation-play-state: paused;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     #background-main-box,
     #left-menu,
@@ -182,7 +170,6 @@
     #progressbar,
     #progressbar-fill {
       animation: none;
-      transition: none;
       stroke-dashoffset: 0;
     }
   }

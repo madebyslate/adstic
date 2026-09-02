@@ -5,6 +5,24 @@ Dopisujesz każdą decyzję niestandardową (AGENT-RULES §9.7).
 
 ---
 
+## 2026-09-02 — wyniki CaseStudies są osobnymi, animowanymi dokumentami SVG
+
+**Decyzja.** Cztery grafiki wyników są osobnymi plikami SVG osadzonymi jako
+leniwe obrazy nad zdjęciami kafli. Każdy plik animuje własne podpisane warstwy:
+tekst, linię lub słupki, marker albo obręcz. Zdjęcie, grafika wyniku, dolne
+przeciemnienie i treść kafla mają jawne, osobne piętra. Z eksportów usunięto
+`foreignObject` z `backdrop-filter`; półprzezroczyste tło karty zostało.
+
+**Powód.** Pierwsze zdjęcia miały stare, angielskie wykresy wtopione w raster;
+zostały zastąpione czystymi kadrami. Rozdzielenie pozwala podmieniać sam kadr
+bez ponownego składania grafiki i zachowuje ostrość tekstu. CSS strony
+nie sięga do wnętrza SVG osadzonego jako `<img>`, dlatego choreografia i
+`prefers-reduced-motion` mieszkają w samych plikach. Samo `loading="lazy"`
+ładowało je zbyt wcześnie, jeszcze przed zobaczeniem kafla, dlatego mały
+`IntersectionObserver` ustawia `src` dopiero przy 28% widoczności i po 180 ms.
+Subtelne pętle dotyczą tylko akcentów, nie całych paneli; bez JS działa
+fallback kompletnego SVG z `<noscript>`.
+
 ## 2026-09-01 — panel OurImpact jest samodzielnie animowanym SVG
 
 **Decyzja.** Raster panelu w `OurImpact` został zastąpiony dostarczonym SVG,
@@ -44,6 +62,44 @@ Po kolejnym sprawdzeniu rysowanie linii trwa 2 s i używa symetrycznego easing,
 jedyna nie przesuwa całej grupy na hover, a dwa radialne gradienty jej znaku
 zostały zastąpione odpowiadającymi im stałymi błękitami — usuwa to błąd
 ponownej kompozycji, przez który znak znikał po ruchu kursora.
+
+## 2026-09-01 — panel OurImpact nie jest skalowany przez scroll, a scroll z iframe idzie przez Lenis
+
+**Decyzja.** Wrapper panelu stracił klasę `scroll-settle`; jedynym wejściem
+panelu jest `panel-open` odgrywane wewnątrz dokumentu SVG. Delta kółka
+przekazana z iframe nie woła już `window.scrollBy`, tylko
+`window.adsticScrollByWheel` z `BaseLayout`, które oddaje ją Lenis
+(`scrollTo(targetScroll + delta, { programmatic: false })`) i schodzi do
+`scrollBy` dopiero, gdy Lenis nie działa. Dokument SVG dostaje z zewnątrz klasę
+`is-paused`, gdy panel wypada z kadru.
+
+**Powód.** Trzy objawy miały dwa źródła. `scroll-settle` skalowało element
+zawierający OSOBNY dokument — każda wartość skali wymusza ponowną rasteryzację
+0,5 MB ścieżek, a zagnieżdżone grupy SVG z własnym animowanym `transform`
+rasteryzują się wtedy w innej skali niż rodzic i widocznie odjeżdżają (znak
+Google Ads w `3-box-row`; ten sam mechanizm zabrał wcześniej znak Meta, co
+zostało doraźnie załatane `#box_3 { transform: none }`). Drugie źródło:
+`window.scrollBy` i Lenis to dwa źródła prawdy o pozycji scrolla — Lenis w
+każdej klatce wpisuje własną, więc nad panelem strona szarpała się między nimi.
+Trzeci objaw — „szarpie od momentu, w którym raz najadę na coś z hoverem" —
+kosztował panel jego hovery. **Wszystkie zostały usunięte.** Hover był
+`transform` na grupie SVG, a transformacji SVG Chrome nie kompozytuje: trzymał
+360 ms przemalowaniami całego dokumentu i zajeżdżał wątek, na którym Lenis
+liczy pozycję. Zdejmowanie kursora z panelu na czas przejazdu było napisane
+i nie wystarczyło — stan zdąży się aktywować, zanim scroll w ogóle ruszy.
+Interaktywność wróci, gdy dostanie nośnik, który kompozytor przyjmie: warstwę
+HTML nad panelem, nie grupę w środku dokumentu. `PLAYBOOK.md` P-067.
+
+To zostawia iframe bez pierwotnego uzasadnienia — dziś trzyma go już tylko
+możliwość zatrzymania animacji poza kadrem. Jeśli hover nie wróci, `<img>`
+usunąłby przy okazji przekazywanie kółka i błędy, które rozszerzenia Chrome
+rzucają na zagnieżdżonym dokumencie SVG.
+
+Pauza poza kadrem jest osobnym oszczędzeniem: pętle „oddychania" wykresów to
+transformacje SVG, których Chrome nie kompozytuje, więc przemalowują cały
+dokument panelu także wtedy, gdy nikt na niego nie patrzy. Klasa `.scroll-settle`
+zostaje w `global.css` jako część systemu ruchu, ale nie ma dziś użycia —
+mechanizm i jego pułapka są opisane w `PLAYBOOK.md` P-066.
 
 ## 2026-08-19 — Monorepo `apps/*` + `packages/*`, jeden lockfile
 
@@ -132,9 +188,11 @@ nadrzędnym zaczyna traceować cały dysk — zaobserwowany build wisiał ponad
 **Decyzja.** Blok `Hero` zawiera inline script włączający odtwarzanie wideo.
 
 **Powód.** Trzeba jednocześnie: nie pobierać wideo przed LCP (`preload="none"`),
-uszanować `prefers-reduced-motion: reduce` i zostawić widoczną treść bez JS.
-Atrybut `autoplay` w HTML jest bezwarunkowy, więc trzeciego warunku nie da się
-spełnić deklaratywnie. Uzasadnienie i budżet: `Hero.spec.md`.
+zaczekać na pełne załadowanie strony, uszanować `prefers-reduced-motion: reduce`
+i zostawić widoczną treść bez JS. Atrybut `autoplay` w HTML jest bezwarunkowy,
+więc tych warunków nie da się spełnić deklaratywnie. Wideo odsłania się dopiero
+na zdarzeniu `playing`, aby pomiędzy posterem a filmem nie pojawiła się czarna
+klatka. Uzasadnienie i budżet: `Hero.spec.md`.
 
 ## 2026-08-19 — TypeScript przypięty na 5.9.3
 
@@ -239,15 +297,11 @@ kolorów w `tokens.css`, bez ruszania komponentów.
 **Decyzja.** `HeroBlock` ma `background: MediaImage` (wymagane) i osobne
 `backgroundVideo: VideoSource[]` (opcjonalne), zamiast `video: MediaVideo`.
 
-**Powód.** `MediaVideo` wymusza niepustą listę `sources`. Tła wideo dziś nie ma
-(`_inbox/wideo/` jest puste), więc trzymanie się `MediaVideo` znaczyłoby wpisanie
-fikcyjnych ścieżek tylko po to, żeby przejść walidację zod — czyli fixture
-kłamiący o tym, co istnieje. Po rozdzieleniu obraz jest elementem LCP niezależnie
-od wideo, a dołożenie wideo nie rusza komponentu ani schematu.
-
-Efekt uboczny, który był celem: przy braku `backgroundVideo` blok nie wysyła
-żadnego JS-u (skrypt autoplay jest warunkowy i `is:inline` — patrz `P-012`).
-Zmierzone: 0 żądań `script`, 7 requestów, LCP 1,50 s.
+**Powód.** `MediaVideo` wymusza niepustą listę `sources`, a Hero musi działać
+również bez działającego wideo. Po rozdzieleniu obraz jest elementem LCP i
+fallbackiem niezależnie od filmu, a wymiana źródeł nie rusza komponentu ani
+schematu. Przy braku `backgroundVideo` warunkowy skrypt `is:inline` znika
+z dokumentu (patrz `P-012`).
 
 ## 2026-08-24 — nawigacja nagłówka w `apps/web/src/lib/navigation.ts`
 

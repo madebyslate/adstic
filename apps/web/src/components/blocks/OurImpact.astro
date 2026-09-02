@@ -37,11 +37,22 @@ const dashboardSrc = resolveVector(block.dashboard)
     <h2 id={headingId} class="impact__heading reveal" style="--reveal-index: 2">{block.heading}</h2>
 
     {/*
-      `<iframe>` daje warstwom SVG prawdziwy hover. `src` ustawiamy dopiero przy
-      wejściu sekcji w kadr, więc cała choreografia startuje przed użytkownikiem.
-      Obraz w `noscript` jest bezpiecznym fallbackiem bez JS.
+      `src` ustawiamy dopiero przy wejściu sekcji w kadr, więc cała choreografia
+      startuje przed użytkownikiem. Obraz w `noscript` jest bezpiecznym
+      fallbackiem bez JS.
+
+      Osobny dokument (a nie `<img>`) jest tu dziś wyłącznie po to, żeby strona
+      mogła zatrzymać animacje panelu poza kadrem. Hovery, dla których ten iframe
+      powstał, są wyłączone — patrz PLAYBOOK P-067.
+
+      PUŁAPKA: panel NIE dostaje `scroll-settle` ani żadnej innej skalującej
+      transformacji. Skala nad `<iframe>` każe przeglądarce rasterować zagnieżdżony
+      dokument od nowa przy każdej wartości skali, a ten dokument ma 0,5 MB
+      ścieżek i własne animacje — stąd zacinanie przy przejeździe przez sekcję
+      i dryf pojedynczych grup SVG (ikona Google Ads w `3-box-row`). Wejście
+      panelu odgrywa sam dokument (`panel-open`), więc nie ma czego dublować.
     */}
-    <div class="impact__screen scroll-settle" data-impact-dashboard>
+    <div class="impact__screen" data-impact-dashboard>
       <iframe
         class="impact__dashboard"
         data-src={dashboardSrc}
@@ -79,19 +90,34 @@ const dashboardSrc = resolveVector(block.dashboard)
       const deltaY = Number(event.data.deltaY)
       if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return
 
-      window.scrollBy(deltaX, deltaY)
+      // Nad iframe kółko nie dociera do Lenis, więc deltę oddajemy jemu, a nie
+      // natywnemu `scrollBy` — inaczej dwa źródła prawdy szarpią się o pozycję.
+      const scroll = window.adsticScrollByWheel
+      if (scroll) scroll(deltaX, deltaY)
+      else window.scrollBy(deltaX, deltaY)
     })
 
     const load = () => {
       if (!frame.src) frame.src = frame.dataset.src ?? ''
     }
 
+    /*
+      Poza kadrem dokument SVG jest zatrzymywany. Jego pętle „oddychania"
+      wykresów to transformacje SVG, których Chrome nie kompozytuje — każda
+      klatka przemalowuje CAŁY dokument panelu. Płacimy za to tylko wtedy, gdy
+      panel jest widoczny.
+    */
+    const setPaused = (paused: boolean) => {
+      // Klasa, nie `style.animationPlayState`: ta własność się nie dziedziczy,
+      // więc zatrzymanie potomków musi wyjść z reguły wewnątrz dokumentu SVG.
+      frame.contentDocument?.documentElement?.classList.toggle('is-paused', paused)
+    }
+
     if ('IntersectionObserver' in window) {
       const observer = new IntersectionObserver(
         ([entry]) => {
-          if (!entry?.isIntersecting) return
-          load()
-          observer.disconnect()
+          if (entry?.isIntersecting) load()
+          setPaused(!entry?.isIntersecting)
         },
         { rootMargin: '20% 0px', threshold: 0.08 },
       )

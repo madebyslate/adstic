@@ -88,13 +88,17 @@ względem szerokości sekcji, więc ten sam procent lądowałby nad nim. Poniże
 
 ## Stany
 
-- Karty `box*` unoszą się o 4 px pod kursorem; należący do
-  karty wykres przyspiesza wtedy swój spokojny ruch.
-- `brand-name`, `range-tabs` i `date-dropdown` unoszą się o 2 px.
-- Pozycje `left-menu` przesuwają się o 5 px w prawo. To reakcje wizualnego
-  demo, nie kontrolki — panel nie wchodzi do kolejności Tab.
+- **Panel nie ma dziś żadnego hoveru.** Karty, `brand-name`, `range-tabs`,
+  `date-dropdown` i pozycje `left-menu` stoją. Hover był `transform` na grupie
+  SVG, a tego Chrome nie kompozytuje: jedno najechanie po drodze wystarczało,
+  żeby 360 ms przemalowań całego panelu zajechało wątek, na którym Lenis liczy
+  pozycję, i strona zaczynała skakać (`PLAYBOOK.md` P-067). Do przywrócenia,
+  gdy hover dostanie nośnik, który da się skompozytować.
+- Panel nie wchodzi do kolejności Tab — to demo wizualne, nie kontrolki.
 - Kółko myszy nad iframe jest przekazywane stronie przez zweryfikowany
   `postMessage`, więc interaktywny panel nie tworzy martwej strefy scrolla.
+  Delta trafia do `window.adsticScrollByWheel`, czyli do Lenis — natywny
+  `scrollBy` bije się z nim o pozycję i widać to jako szarpanie.
 
 ## Animacje
 
@@ -107,7 +111,11 @@ względem szerokości sekcji, więc ten sam procent lądowałby nad nim. Poniże
 | `3-box-row`: `box–4` | po drugim rzędzie | 0,76 s od 1,28 s | expo-out | jw. |
 | `chart-fill*`, `chart-stroke` | osobno dla każdego rzędu | 2 s; 0,98 / 1,45 / 1,98 s | symetryczne ease-in-out | pełne dane bez przejścia |
 | `progressbar-fill` | z pierwszym rzędem | 0,9 s od 0,98 s | expo-out | pełny pasek bez przejścia |
-| grupy `chart*` i `progressbar` | po wejściu danych | 2,8–3,2 s, `alternate`, pętla | ease-in-out | zatrzymane |
+| grupy `chart*` i `progressbar` | po wejściu danych, tylko gdy panel jest w kadrze | 2,8–3,2 s, `alternate`, pętla | ease-in-out | zatrzymane |
+
+Poza kadrem strona dokłada dokumentowi SVG klasę `is-paused`
+(`animation-play-state: paused`): pętle wykresów są transformacjami SVG, których
+Chrome nie kompozytuje, więc każda ich klatka przemalowuje cały panel.
 
 Tła `chart-bg*` są widoczne od początku, a dane `chart-fill*` lub
 `chart-stroke` są rysowane od lewej przez `stroke-dashoffset`; linia zachowuje
@@ -124,7 +132,7 @@ koszt zachowania osobnego requestu zamiast ok. 535 KB inline HTML.
 Sekcja jest grupą `data-reveal-group`: trzyma wszystkie swoje animacje na
 pierwszej klatce, dopóki obserwator w `BaseLayout` nie uzna, że jest dość
 blisko, by warto ją było odegrać. Kolejność niesie `--reveal-index` w markupie
-— łuna 0 (`reveal-fade` — `translate` trzyma jej pozycję), etykieta 1, nagłówek 2. Panel osiada `scroll-settle`, czyli w tempie, w jakim użytkownik do niego zjeżdża; wewnętrzne warstwy danych ruszają przy załadowaniu SVG. Mechanizm opisany przy „W polu widzenia" w `global.css`,
+— łuna 0 (`reveal-fade` — `translate` trzyma jej pozycję), etykieta 1, nagłówek 2. Panel NIE ma wejścia sterowanego scrollem: wchodzi własnym `panel-open` wewnątrz dokumentu SVG, a wewnętrzne warstwy danych ruszają przy jego załadowaniu. Skala nad `<iframe>` rasteryzowałaby zagnieżdżony dokument w każdej klatce (`PLAYBOOK.md` P-066). Mechanizm opisany przy „W polu widzenia" w `global.css`,
 uzasadnienie w `DECISIONS.md` (2026-08-27, system wejść w CSS).
 
 ## Budżet

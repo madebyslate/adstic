@@ -19,10 +19,11 @@ test.describe('Blok Hero', () => {
     await expect(background).toHaveAttribute('loading', 'eager')
     await expect(background).toHaveAttribute('fetchpriority', 'high')
 
-    // Preload musi wskazywać dokładnie ten sam plik, który renderuje <img>.
-    const preloaded = await page.locator('link[rel="preload"][as="image"]').getAttribute('href')
-    expect(preloaded).toBeTruthy()
-    expect(await background.getAttribute('src')).toBe(preloaded)
+    // Responsywny preload musi mieć ten sam srcset co obraz. Bez niego
+    // przeglądarka pobiera najpierw `href` 1920 px, a potem drugi wariant.
+    const preload = page.locator('link[rel="preload"][as="image"]')
+    await expect(preload).toHaveAttribute('imagesizes', '100vw')
+    expect(await preload.getAttribute('imagesrcset')).toBe(await background.getAttribute('srcset'))
   })
 
   test('obraz tła wypełnia sekcję, nie zostawia paska tła pod spodem', async ({ page }) => {
@@ -93,24 +94,47 @@ test.describe('Blok Hero', () => {
     await expect(hero.locator('span[aria-hidden="true"] svg')).toHaveCount(5)
   })
 
-  test('bez wideo w danych blok nie wysyła ani bajta własnego JS', async ({ page }) => {
+  test('przy ograniczeniu ruchu zostaje poster i wideo nie jest pobierane', async ({ page }) => {
     /*
      * `is:inline` przy skrypcie autoplay jest tu wymogiem, nie stylem — zwykły
      * <script> Astro wynosi do bundla niezależnie od warunku wokół niego.
      *
-     * Test pilnuje BLOKU, nie strony. Skrypty ruchu (obserwator wejść i Lenis)
-     * mieszkają w BaseLayout i są świadomą decyzją — patrz DECISIONS.md. Gdyby
-     * Hero kiedykolwiek zaczął wynosić własny skrypt do bundla, pojawiłby się
-     * chunk z „Hero" w nazwie i ten test go złapie.
+     * Skrypt Hero jest inline, ale przy `reduce` nie może nawet rozpocząć
+     * pobierania źródła. Obraz LCP pozostaje wtedy jedynym widocznym tłem.
      */
-    const scripts: string[] = []
+    const videoRequests: string[] = []
     page.on('request', (request) => {
-      if (request.resourceType() === 'script') scripts.push(request.url())
+      if (request.resourceType() === 'media') videoRequests.push(request.url())
     })
 
     await page.goto('/', { waitUntil: 'networkidle' })
 
-    const fromLayout = /\/_astro\/(BaseLayout\.astro_astro_type_script|lenis\.)/
-    expect(scripts.filter((url) => !fromLayout.test(url))).toEqual([])
+    const video = page.locator('[data-hero-video]')
+    await expect(video).toHaveAttribute('preload', 'none')
+    await expect(video).not.toHaveAttribute('data-playing', '')
+    expect(videoRequests.filter((url) => url.includes('/video/hero-bg'))).toEqual([])
+  })
+
+  test('każde źródło wideo hero jest częścią buildu', async ({ page, request }) => {
+    await page.goto('/')
+
+    const sources = await page.locator('[data-hero-video] source').evaluateAll((nodes) =>
+      nodes.map((node) => node.getAttribute('src')).filter((src): src is string => Boolean(src)),
+    )
+    expect(sources).toHaveLength(4)
+
+    for (const source of sources) {
+      const response = await request.get(source)
+      expect(response.status(), source).toBe(200)
+    }
+  })
+
+  test('po załadowaniu strony poster ustępuje odtwarzanemu wideo', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await page.goto('/')
+
+    const video = page.locator('[data-hero-video]')
+    await expect(video).toHaveAttribute('data-playing', '', { timeout: 10_000 })
+    expect(await video.evaluate((element: HTMLVideoElement) => element.currentTime)).toBeGreaterThan(0)
   })
 })

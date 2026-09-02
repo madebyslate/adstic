@@ -24,6 +24,11 @@ const CaseStudyBase = z.object({
  */
 export const FeaturedCaseStudy = CaseStudyBase.extend({
   thumbnail: MediaImage,
+  /**
+   * Warstwowy SVG z wynikiem i wykresem. Jest osobnym zasobem od zdjęcia,
+   * żeby kadr można było wymienić bez ponownego składania grafiki.
+   */
+  resultGraphic: MediaImage,
 })
 export type FeaturedCaseStudy = z.infer<typeof FeaturedCaseStudy>
 
