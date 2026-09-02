@@ -115,6 +115,71 @@ test.describe('Choreografia wejścia', () => {
   })
 })
 
+test.describe('Tła wideo AdPlacements', () => {
+  const SECTION = 'section:has(#ad-placements-heading)'
+  const VIDEO_REQUEST = '/video/placements/'
+
+  test('ładują się dopiero w kadrze i trafiają do właściwych kafli', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    const requests: string[] = []
+    page.on('request', (request) => {
+      if (request.url().includes(VIDEO_REQUEST)) requests.push(request.url())
+    })
+
+    await page.goto('/')
+
+    const videos = page.locator(`${SECTION} [data-placement-video]`)
+    await expect(videos).toHaveCount(2)
+    expect(requests, 'wideo konkuruje o sieć z pierwszym ekranem').toEqual([])
+
+    const sources = videos.locator('source')
+    await expect(sources.nth(0)).toHaveAttribute(
+      'data-src',
+      '/video/placements/shopping-campaigns-bg-v1.webm',
+    )
+    await expect(sources.nth(1)).toHaveAttribute(
+      'data-src',
+      '/video/placements/video-campaigns-bg-v1.webm',
+    )
+    await expect(sources.nth(0)).not.toHaveAttribute('src', /.+/)
+    await expect(sources.nth(1)).not.toHaveAttribute('src', /.+/)
+
+    for (const video of await videos.all()) {
+      await video.scrollIntoViewIfNeeded()
+      await expect(video.locator('source')).toHaveAttribute('src', /\.webm$/)
+      /*
+       * Ustawiony `src` to jeszcze nie obraz. Przy niepełnym ciągu kodeka
+       * (`codecs=av01` zamiast `av01.0.08M.08`) `canPlayType` zwraca "",
+       * przeglądarka odrzuca CAŁY `<source>` i kafel zostaje na obrazie
+       * fallbacku — a wszystkie asercje wyżej nadal przechodzą. `data-playing`
+       * jest jedynym dowodem, że dekoder to przyjął: leci z eventu `playing`
+       * i to on odsłania wideo (`opacity`).
+       */
+      await expect(video).toHaveAttribute('data-playing', '')
+    }
+
+    await expect.poll(() => requests.length).toBe(2)
+  })
+
+  test('przy ograniczeniu ruchu zostają obrazy i wideo nie jest pobierane', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    const requests: string[] = []
+    page.on('request', (request) => {
+      if (request.url().includes(VIDEO_REQUEST)) requests.push(request.url())
+    })
+
+    await page.goto('/')
+    const videos = page.locator(`${SECTION} [data-placement-video]`)
+
+    for (const video of await videos.all()) await video.scrollIntoViewIfNeeded()
+    await page.waitForTimeout(100)
+
+    await expect(videos.locator('source').nth(0)).not.toHaveAttribute('src', /.+/)
+    await expect(videos.locator('source').nth(1)).not.toHaveAttribute('src', /.+/)
+    expect(requests).toEqual([])
+  })
+})
+
 test.describe('Ikony kropkowe: mruganie i deszcz', () => {
   const ICON = 'section:has(#why-choose-heading) .why-item__icon'
 

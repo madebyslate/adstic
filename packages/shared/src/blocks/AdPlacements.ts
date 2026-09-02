@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MediaImage } from '../primitives'
+import { MediaImage, VideoSource } from '../primitives'
 
 /**
  * Jedno miejsce wyświetlania reklamy.
@@ -23,6 +23,14 @@ export const Placement = z.object({
    * drugi raz i dopuszczało sprzeczną parę.
    */
   background: MediaImage.optional(),
+  /**
+   * Dekoracyjne, nieme tło ruchome. Obraz `background` pozostaje obowiązkowym
+   * fallbackiem bez JS, dla `prefers-reduced-motion` i po blokadzie autoplay.
+   */
+  backgroundVideo: z.array(VideoSource).min(1).optional(),
+}).refine((placement) => !placement.backgroundVideo || placement.background, {
+  message: 'backgroundVideo wymaga obrazu background jako fallbacku',
+  path: ['background'],
 })
 export type Placement = z.infer<typeof Placement>
 

@@ -23,6 +23,7 @@ ilustracją, nie listą linków — nic w nim nie jest klikalne.
 | `placements[].title` | `string` | tak | `<h3>` kafla |
 | `placements[].preview` | `MediaImage` | tak | makieta formatu; eksport **2×** (patrz niżej) |
 | `placements[].background` | `MediaImage?` | nie | łuna pod makietą; jej obecność ustala kompozycję kafla |
+| `placements[].backgroundVideo` | `VideoSource[]?` | nie | dekoracyjne tło nad obrazem-fallbackiem; wymaga `background` |
 
 Czego w danych **nie ma**, choć widać to w złożeniu:
 
@@ -41,6 +42,12 @@ Czego w danych **nie ma**, choć widać to w złożeniu:
 |---|---|
 | jest | leży w środku kafla, cała widoczna, na łunie wygaszonej u góry i u dołu |
 | brak | stoi **na dolnej krawędzi** kafla (bez dolnego paddingu) i przenika w nią przez wygaszenie |
+
+`backgroundVideo` nie zmienia kompozycji. Jest ruchomym ulepszeniem istniejącego
+`background`: bez JS, przy blokadzie autoplay albo przy
+`prefers-reduced-motion: reduce` nadal widać obraz. Źródła wideo nie mają `src`
+w początkowym HTML-u — dostają go dopiero po wejściu sekcji w kadr, więc nie
+konkurują o sieć z pierwszym ekranem. Po wyjściu sekcji wideo jest pauzowane.
 
 To jest ta sama różnica, którą widać w złożeniu: „Shopping"/„Video" to sceny na
 czerwonej łunie, „Search"/„Display" to telefon wychodzący z dolnej krawędzi kafla.
@@ -80,6 +87,7 @@ Brak. Nic w bloku nie jest kontrolką: żadnego hovera, focusa ani linku.
 | Co | Kiedy | Czas | Easing | `reduce` |
 |---|---|---|---|---|
 | wejście sekcji: etykieta, nagłówek, kafle | wjazd sekcji w kadr (grupa `data-reveal-group`) | `--duration-reveal` (0,9 s), krok `--reveal-step` | `--ease-out-expo` | wyłączone globalnie — ląduje na klatce końcowej |
+| tło „Kampanie produktowe” i „Kampanie wideo” | kafle w polu widzenia | 19,92 s, pętla przód → tył | ruch zapisany w pliku | nie jest ładowane; zostaje obraz |
 
 ### Wejście
 
@@ -93,9 +101,9 @@ uzasadnienie w `DECISIONS.md` (2026-08-27, system wejść w CSS).
 
 | Pozycja | Budżet | Faktycznie |
 |---|---|---|
-| JS (skompresowany) | 0 KB | **0 KB** |
-| Requesty przy starcie | 0 nowych | 0 — sześć obrazów leży pod foldem i idzie `loading="lazy"` |
-| Największy zasób | — | `video-campaigns` (AVIF, 806 px) |
+| JS (skompresowany) | < 0,5 KB | skrypt ładowania i pauzy dwóch teł po widoczności |
+| Requesty przy starcie | 0 nowych | 0 — obrazy są `loading="lazy"`, źródła wideo nie mają jeszcze `src` |
+| Wideo po wejściu w kadr | < 0,5 MB łącznie | 481 KB (`adstick5`: 200 KB, `adstick2`: 281 KB) |
 
 ## A11y
 

@@ -59,6 +59,20 @@ const placements = block.placements.map((placement, index) => ({
                   widths={[540, 1080]}
                   sizes="(min-width: 1024px) 50vw, 100vw"
                 />
+
+                {placement.backgroundVideo && (
+                  <video
+                    muted
+                    loop
+                    playsinline
+                    preload="none"
+                    data-placement-video
+                  >
+                    {placement.backgroundVideo.map((source) => (
+                      <source data-src={source.src} type={source.type} media={source.media} />
+                    ))}
+                  </video>
+                )}
               </div>
             )}
 
@@ -163,6 +177,21 @@ const placements = block.placements.map((placement, index) => ({
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  .tile__glow video {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity var(--duration-base) var(--ease-standard);
+  }
+
+  .tile__glow video[data-playing] {
+    opacity: 1;
   }
 
   /*
@@ -324,3 +353,44 @@ const placements = block.placements.map((placement, index) => ({
     }
   }
 </style>
+
+{
+  placements.some((placement) => placement.backgroundVideo) && (
+    <script
+      is:inline
+      set:html={`
+        var placementVideos = document.querySelectorAll('[data-placement-video]')
+        var placementMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+        var startPlacementVideo = function (video) {
+          if (placementMotion.matches) return
+
+          if (!video.dataset.loaded) {
+            video.querySelectorAll('source[data-src]').forEach(function (source) {
+              source.src = source.dataset.src
+            })
+            video.dataset.loaded = 'true'
+            video.addEventListener('playing', function () {
+              video.setAttribute('data-playing', '')
+            }, { once: true })
+            video.load()
+          }
+
+          var played = video.play()
+          if (played) played.catch(function () {})
+        }
+
+        if ('IntersectionObserver' in window) {
+          var placementVideoObserver = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+              var video = entry.target
+              if (entry.isIntersecting) startPlacementVideo(video)
+              else video.pause()
+            })
+          })
+          placementVideos.forEach(function (video) { placementVideoObserver.observe(video) })
+        }
+      `}
+    />
+  )
+}

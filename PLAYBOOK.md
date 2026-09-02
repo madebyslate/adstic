@@ -1731,3 +1731,87 @@ panelem i szukaj pasm „Paint”/„Raster” szerszych niż ramka klatki.
 **Do startera.** Reguła: **osadzony dokument nie przyjmuje kursora, gdy strona
 jedzie.** Dotyczy każdego iframe z interaktywną grafiką; hover ma sens, gdy
 użytkownik patrzy, a nie gdy przewija obok.
+
+### P-068 — niepełny ciąg kodeka w `<source type>` wycina wideo bez jednego błędu
+
+**Objaw.** Kafel AdPlacements pokazuje obraz tła i nigdy nie przechodzi na
+wideo. Plik leży w `public/`, serwer oddaje go z `200` i `video/webm`,
+`<source>` ma poprawny `src`, obserwator wywołuje `play()` — a konsola milczy
+i `video.error` jest `null`. Nic nie wygląda na zepsute.
+
+**Przyczyna.** W treści było `type="video/webm; codecs=av01"`. `av01` samo
+w sobie **nie jest ciągiem kodeka** — pełna forma to `av01.P.LLT.DD` (profil,
+poziom, tier, głębia). Przy niepełnym ciągu `canPlayType()` zwraca `""`, więc
+przeglądarka odrzuca CAŁY `<source>` jeszcze przed pobraniem pliku. Element
+`<video>` nie ma wtedy żadnego użytecznego źródła, ale to nie jest błąd
+odtwarzania: `error` zostaje `null`, `play()` odrzuca się cicho, sieć nie
+notuje żądania. Dokładnie ten sam mechanizm ucina poprawny plik przy literówce
+w profilu albo przy `codecs=vp9` zamiast `vp09.00.10.08`.
+
+Wartości bierzesz z pliku, nie z pamięci:
+
+```sh
+ffprobe -v error -show_entries stream=profile,level,pix_fmt -of csv=p=0 plik.webm
+# Main,yuv420p,8  →  profil 0, poziom 08, tier M, 8 bitów  →  av01.0.08M.08
+```
+
+**Fix.** Pełny ciąg w danych: `video/webm; codecs=av01.0.08M.08`. Weryfikacja
+zajmuje jedno wywołanie w konsoli przeglądarki i jest jednoznaczna:
+
+```js
+document.createElement('video').canPlayType('video/webm; codecs=av01.0.08M.08')
+// "probably" — przyjęty;  "" — odrzucony, wideo nie ruszy
+```
+
+**Wyłapuje.** `tests/visual/motion.spec.ts` → „Tła wideo AdPlacements → ładują
+się dopiero w kadrze i trafiają do właściwych kafli”, asercja
+`toHaveAttribute('data-playing', '')`. Test istniał wcześniej i **przechodził
+z tym błędem**: sprawdzał, że JS ustawia `src` i że leci żądanie — a jedno
+i drugie dzieje się niezależnie od tego, czy dekoder przyjął `<source>`.
+Dowodem jest dopiero `data-playing`, bo atrybut leci z eventu `playing` i to on
+odsłania wideo. Reguła ogólna: **test wideo, który nie sprawdza `playing`,
+sprawdza ścieżkę pliku, nie obraz.**
+
+**Do startera.** Reguła: **`type` przy `<source>` podajesz z pełnym ciągiem
+kodeka albo nie podajesz go wcale.** Trzecia droga — ciąg skrócony do nazwy
+rodziny — jest gorsza od obu, bo wygląda na deklarację, a działa jak blokada.
+
+### P-069 — turbo oddaje cache builda, choć treść się zmieniła
+
+**Objaw.** Zmieniasz `content/pages/home.json`, robisz `pnpm build:web`, turbo
+melduje `>>> FULL TURBO` w 10 ms — i w `dist/` jest stary HTML. Wygląda jak
+cache przeglądarki albo martwy serwer podglądu, więc szukasz w złym miejscu.
+
+**Przyczyna.** Bez pola `inputs` turbo liczy hash zadania z plików śledzonych
+przez gita **wewnątrz katalogu pakietu**. `content/` leży w korzeniu repo, poza
+`apps/web`, więc dla cache'a nie istnieje. To samo dotyczy każdego pakietu bez
+zadania `build`: `dependsOn: ["^build"]` nie ma czego uruchomić, więc zmiany
+w `packages/tokens/tokens.css` i `packages/shared/src/` też nie unieważniają
+builda weba. `inputs` tego nie naprawi — ścieżki w `inputs` nie mogą wyjść poza
+pakiet.
+
+**Fix.** `globalDependencies` w `turbo.json` — jedyny mechanizm sięgający poza
+katalog pakietu:
+
+```json
+"globalDependencies": [
+  "content/**",
+  "packages/tokens/tokens.css",
+  "packages/shared/src/**"
+]
+```
+
+Unieważnia wszystkie zadania, nie tylko build weba. To jest cena poprawności
+i przy tej wielkości repo nie widać jej w czasie.
+
+**Wyłapuje.** ⚠️ Nic automatycznie — cache trafia w stan, który jest poprawny
+dla starych wejść, więc żaden test nie ma się do czego przyczepić.
+Sygnał ostrzegawczy: `>>> FULL TURBO` zaraz po edycji pliku, którego zawartość
+na pewno wchodzi do buildu. Wtedy `pnpm build:web --force` mówi w sekundę,
+czy problem jest w cache'u, czy w kodzie.
+
+**Do startera.** Reguła: **każdy katalog spoza pakietów, z którego build czyta,
+musi być wymieniony w `globalDependencies`.** W tym układzie to `content/`;
+w projekcie z osobnym katalogiem tłumaczeń albo konfiguracji będzie to ten
+katalog. Lista powstaje raz, przy zakładaniu repo — dopisywana po fakcie zawsze
+kosztuje najpierw godzinę szukania nie tam, gdzie trzeba.

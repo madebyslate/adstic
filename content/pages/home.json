@@ -366,7 +366,13 @@
             "alt": "",
             "width": 1080,
             "height": 750
-          }
+          },
+          "backgroundVideo": [
+            {
+              "src": "/video/placements/shopping-campaigns-bg-v1.webm",
+              "type": "video/webm; codecs=av01.0.08M.08"
+            }
+          ]
         },
         {
           "title": "Kampanie w wyszukiwarce",
@@ -399,7 +405,13 @@
             "alt": "",
             "width": 1080,
             "height": 750
-          }
+          },
+          "backgroundVideo": [
+            {
+              "src": "/video/placements/video-campaigns-bg-v1.webm",
+              "type": "video/webm; codecs=av01.0.08M.08"
+            }
+          ]
         }
       ]
     },

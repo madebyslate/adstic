@@ -1,5 +1,10 @@
 {
   "$schema": "https://turborepo.com/schema.json",
+  "globalDependencies": [
+    "content/**",
+    "packages/tokens/tokens.css",
+    "packages/shared/src/**"
+  ],
   "globalEnv": [
     "NODE_ENV",
     "CONTENT_SOURCE",
